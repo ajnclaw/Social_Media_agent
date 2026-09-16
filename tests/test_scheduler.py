@@ -1,5 +1,5 @@
-from scheduler import Scheduler
-from task import (
+from agent.scheduler import Scheduler
+from agent.task import (
     Task,
     TASK_READY,
     TASK_RUNNING,

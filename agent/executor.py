@@ -1,6 +1,6 @@
-from config import DEFAULT_MAX_ITERATIONS, DEFAULT_MODEL
-from tools import TOOL_SCHEMAS, ToolManager
-from llm_client import chat
+from .config import DEFAULT_MAX_ITERATIONS, DEFAULT_MODEL
+from .tools import TOOL_SCHEMAS, ToolManager
+from .llm_client import chat
 
 
 SYSTEM_PROMPT = """

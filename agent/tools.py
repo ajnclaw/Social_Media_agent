@@ -4,10 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from config import PROJECT_ROOT, SANDBOX_DIR
-from memory import search_memory, save_memory
-from approval import ApprovalPolicy
-from approval_manager import ApprovalManager
+from .config import PROJECT_ROOT, SANDBOX_DIR
+from .memory import search_memory, save_memory
+from .approval import ApprovalPolicy
+from .approval_manager import ApprovalManager
 
 
 ALLOWED_COMMANDS = {

@@ -4,7 +4,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-from config import PROJECT_ROOT
+from .config import PROJECT_ROOT
 
 
 LOG_DIR = PROJECT_ROOT / "logs"

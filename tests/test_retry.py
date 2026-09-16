@@ -1,6 +1,6 @@
-import retry as retry_module
-from retry import RetryPolicy
-from task import (
+import agent.retry as retry_module
+from agent.retry import RetryPolicy
+from agent.task import (
     Task,
     FAILURE_TRANSIENT,
     FAILURE_RECOVERABLE,

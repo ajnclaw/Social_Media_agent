@@ -1,5 +1,5 @@
-from failure import FailureClassifier
-from task import (
+from agent.failure import FailureClassifier
+from agent.task import (
     FAILURE_TRANSIENT,
     FAILURE_RECOVERABLE,
     FAILURE_PERMANENT,

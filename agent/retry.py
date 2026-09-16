@@ -1,6 +1,6 @@
 import time
 
-from task import (
+from .task import (
     FAILURE_TRANSIENT,
     FAILURE_RECOVERABLE,
     FAILURE_PERMANENT,

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from config import MEMORY_FILE
+from .config import MEMORY_FILE
 
 
 def search_memory(query):

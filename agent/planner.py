@@ -1,9 +1,9 @@
 import json
 
-from config import DEFAULT_MODEL
-from task import Task
+from .config import DEFAULT_MODEL
+from .task import Task
 
-from llm_client import chat
+from .llm_client import chat
 
 
 SYSTEM_PROMPT = """

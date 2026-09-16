@@ -1,5 +1,5 @@
-from evaluator import Evaluator
-from task import Task
+from agent.evaluator import Evaluator
+from agent.task import Task
 
 
 def make_verification_task(depends_on, expected_output):

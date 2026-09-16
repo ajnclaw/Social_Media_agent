@@ -1,4 +1,4 @@
-from task import (
+from .task import (
     TASK_READY,
     TASK_RUNNING,
     TASK_SUCCESS,

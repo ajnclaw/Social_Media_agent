@@ -98,6 +98,38 @@ class RunLogger:
             "denied": result.get("denied", False),
         })
 
+    def log_llm_call(self, component, model, response):
+        message = response.message
+        content = message.content or ""
+
+        tool_calls = [
+            {
+                "name": tool_call.function.name,
+                "arguments": tool_call.function.arguments,
+            }
+            for tool_call in (message.tool_calls or [])
+        ]
+
+        preview = content if len(content) <= 300 else content[:300] + "..."
+        tool_call_names = [tc["name"] for tc in tool_calls]
+
+        self.logger.info(
+            "[LLM/%s] %s -> %s%s",
+            component,
+            model,
+            preview or "(no content)",
+            f" tool_calls={tool_call_names}" if tool_calls else "",
+        )
+
+        self.trace["events"].append({
+            "type": "llm_call",
+            "elapsed_seconds": round(time.time() - self.started_at, 3),
+            "component": component,
+            "model": model,
+            "content": content,
+            "tool_calls": tool_calls,
+        })
+
     def finalize(self, state):
         self.trace["status"] = state.status
         self.trace["duration_seconds"] = round(time.time() - self.started_at, 2)

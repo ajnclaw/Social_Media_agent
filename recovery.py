@@ -1,7 +1,6 @@
-import ollama
-
 from config import DEFAULT_MODEL
 from tools import TOOL_SCHEMAS, ToolManager
+from llm_client import chat
 
 
 SYSTEM_PROMPT = """
@@ -57,6 +56,10 @@ class Recovery:
     def __init__(self, model=DEFAULT_MODEL):
         self.model = model
         self.tool_manager = ToolManager()
+        self.logger = None
+
+    def set_logger(self, logger):
+        self.logger = logger
 
     def repair(
         self,
@@ -88,10 +91,12 @@ class Recovery:
 
         for iteration in range(5):
 
-            response = ollama.chat(
-                model=self.model,
-                messages=messages,
+            response = chat(
+                "recovery",
+                self.model,
+                messages,
                 tools=TOOL_SCHEMAS,
+                logger=self.logger,
             )
 
             messages.append(response.message)

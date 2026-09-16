@@ -3,7 +3,7 @@ import json
 from config import DEFAULT_MODEL
 from task import Task
 
-import ollama
+from llm_client import chat
 
 
 SYSTEM_PROMPT = """
@@ -88,20 +88,20 @@ Example:
 class Planner:
     def __init__(self, model=DEFAULT_MODEL):
         self.model = model
+        self.logger = None
+
+    def set_logger(self, logger):
+        self.logger = logger
 
     def plan(self, user_input):
-        response = ollama.chat(
-            model=self.model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": SYSTEM_PROMPT,
-                },
-                {
-                    "role": "user",
-                    "content": user_input,
-                },
+        response = chat(
+            "planner",
+            self.model,
+            [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_input},
             ],
+            logger=self.logger,
         )
 
         content = response["message"]["content"]

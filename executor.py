@@ -1,7 +1,6 @@
-import ollama
-
 from config import DEFAULT_MAX_ITERATIONS, DEFAULT_MODEL
 from tools import TOOL_SCHEMAS, ToolManager
+from llm_client import chat
 
 
 SYSTEM_PROMPT = """
@@ -29,6 +28,10 @@ class Executor:
     def __init__(self, model=DEFAULT_MODEL):
         self.model = model
         self.tool_manager = ToolManager()
+        self.logger = None
+
+    def set_logger(self, logger):
+        self.logger = logger
 
     def execute(
         self,
@@ -53,10 +56,12 @@ class Executor:
         last_tool_output = None
 
         for iteration in range(max_iterations):
-            response = ollama.chat(
-                model=self.model,
-                messages=messages,
+            response = chat(
+                "executor",
+                self.model,
+                messages,
                 tools=TOOL_SCHEMAS,
+                logger=self.logger,
             )
 
             messages.append(response.message)

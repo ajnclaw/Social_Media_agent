@@ -24,7 +24,10 @@ class Agent:
         state = AgentState(user_input)
         run_logger = RunLogger(user_input)
 
+        self.planner.set_logger(run_logger)
+        self.executor.set_logger(run_logger)
         self.executor.tool_manager.set_logger(run_logger)
+        self.recovery.set_logger(run_logger)
         self.recovery.tool_manager.set_logger(run_logger)
 
         tasks = self.planner.plan(user_input)

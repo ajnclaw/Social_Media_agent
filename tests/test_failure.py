@@ -18,6 +18,14 @@ def test_classifies_http_5xx_as_transient():
     assert classifier.classify("503 Service Unavailable") == FAILURE_TRANSIENT
 
 
+def test_classifies_server_disconnected_as_transient():
+    classifier = FailureClassifier()
+
+    error = "Server disconnected without sending a response."
+
+    assert classifier.classify(error) == FAILURE_TRANSIENT
+
+
 def test_classification_is_case_insensitive():
     classifier = FailureClassifier()
 

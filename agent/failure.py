@@ -17,6 +17,7 @@ class FailureClassifier:
             "timeout",
             "timed out",
             "connection",
+            "disconnected",
             "network",
             "temporarily unavailable",
             "rate limit",

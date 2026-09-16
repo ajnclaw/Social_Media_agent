@@ -81,10 +81,17 @@ class Agent:
                     )
 
                 else:
-                    result = self.executor.execute(
-                        task,
-                        context=state.task_results,
-                    )
+                    try:
+                        result = self.executor.execute(
+                            task,
+                            context=state.task_results,
+                        )
+                    except Exception as exc:
+                        result = {
+                            "success": False,
+                            "output": None,
+                            "error": str(exc),
+                        }
 
                     evaluation = self.evaluator.evaluate(
                         task,
@@ -205,12 +212,19 @@ class Agent:
                                 task.depends_on[-1],
                             )
 
-                        recovery_result = self.recovery.repair(
-                            task,
-                            error,
-                            context=state.task_results,
-                            failed_dependency=dependency_task,
-                        )
+                        try:
+                            recovery_result = self.recovery.repair(
+                                task,
+                                error,
+                                context=state.task_results,
+                                failed_dependency=dependency_task,
+                            )
+                        except Exception as exc:
+                            recovery_result = {
+                                "success": False,
+                                "output": None,
+                                "error": str(exc),
+                            }
 
                         if recovery_result.get("success"):
                             run_logger.log_event(

@@ -14,7 +14,7 @@ class ApprovalPolicy:
         "create_directory",
         "write_file",
         "edit_file",
-        "save_memory_tool",
+        "save_memory",
         "run_command",
     }
 

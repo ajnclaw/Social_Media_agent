@@ -79,182 +79,182 @@ class Agent:
                         state.task_results,
                     )
 
-            if evaluation.get("success"):
-                self.scheduler.mark_success(
-                    task,
-                    evaluation.get("output"),
-                )
-
-                state.add_task_result(
-                    task,
-                    evaluation.get("output"),
-                )
-
-                print(
-                    f"Task {task.step} completed."
-                )
-            
-            else:
-                error = evaluation.get("error")
-
-                print(
-                    f"Task {task.step} failed: {error}"
-                )
-
-                # ---------------------------------
-                # Classify the failure
-                # ---------------------------------
-
-                failure_type = self.failure_classifier.classify(
-                    error,
-                    task,
-                )
-
-                task.failure_type = failure_type
-
-                task.failure_history.append(
-                    {
-                        "error": error,
-                        "failure_type": failure_type,
-                        "retry": task.retries,
-                    }
-                )
-
-                print(
-                    f"[Failure] Type: {failure_type}"
-                )
-
-                # ---------------------------------
-                # Decide what to do
-                # ---------------------------------
-
-                action = self.retry_policy.action(
-                    task,
-                    failure_type,
-                )
-
-                should_retry = self.retry_policy.should_retry(
-                    task,
-                    failure_type,
-                )
-
-                print(
-                    f"[Retry Policy] Action: {action}, "
-                    f"Should retry: {should_retry}"
-                )
-
-                if not should_retry:
-                    print(
-                        f"[Failure] Task {task.step} "
-                        f"will not be retried."
-                    )
-
-                    self.scheduler.mark_failed(
+                if evaluation.get("success"):
+                    self.scheduler.mark_success(
                         task,
+                        evaluation.get("output"),
+                    )
+
+                    state.add_task_result(
+                        task,
+                        evaluation.get("output"),
+                    )
+
+                    print(
+                        f"Task {task.step} completed."
+                    )
+
+                else:
+                    error = evaluation.get("error")
+
+                    print(
+                        f"Task {task.step} failed: {error}"
+                    )
+
+                    # ---------------------------------
+                    # Classify the failure
+                    # ---------------------------------
+
+                    failure_type = self.failure_classifier.classify(
                         error,
+                        task,
                     )
 
-                    state.status = "failed"
-                    return state
+                    task.failure_type = failure_type
 
-                # ---------------------------------
-                # Consume a retry
-                # ---------------------------------
-
-                task.retries += 1
-
-                print(
-                    f"\n[Retry] Attempt "
-                    f"{task.retries}/{task.max_retries}"
-                )
-                self.retry_policy.wait(
-                    task,
-                    failure_type,
-                )
-
-                # ---------------------------------
-                # TRANSIENT FAILURE
-                # ---------------------------------
-
-                if action == "retry":
+                    task.failure_history.append(
+                        {
+                            "error": error,
+                            "failure_type": failure_type,
+                            "retry": task.retries,
+                        }
+                    )
 
                     print(
-                        "[Retry] Transient failure. "
-                        "Retrying task directly."
+                        f"[Failure] Type: {failure_type}"
                     )
 
-                    self.scheduler.reset_task(task)
+                    # ---------------------------------
+                    # Decide what to do
+                    # ---------------------------------
 
-                    continue
+                    action = self.retry_policy.action(
+                        task,
+                        failure_type,
+                    )
 
-                # ---------------------------------
-                # RECOVERABLE FAILURE
-                # ---------------------------------
-
-                if action == "recover":
+                    should_retry = self.retry_policy.should_retry(
+                        task,
+                        failure_type,
+                    )
 
                     print(
-                        "[Recovery] Recoverable failure. "
-                        "Starting recovery."
+                        f"[Retry Policy] Action: {action}, "
+                        f"Should retry: {should_retry}"
                     )
 
-                    dependency_task = None
-
-                    if task.depends_on:
-                        dependency_task = self.scheduler.get_task(
-                            state.tasks,
-                            task.depends_on[-1],
+                    if not should_retry:
+                        print(
+                            f"[Failure] Task {task.step} "
+                            f"will not be retried."
                         )
 
-                    recovery_result = self.recovery.repair(
+                        self.scheduler.mark_failed(
+                            task,
+                            error,
+                        )
+
+                        state.status = "failed"
+                        return state
+
+                    # ---------------------------------
+                    # Consume a retry
+                    # ---------------------------------
+
+                    task.retries += 1
+
+                    print(
+                        f"\n[Retry] Attempt "
+                        f"{task.retries}/{task.max_retries}"
+                    )
+                    self.retry_policy.wait(
                         task,
-                        error,
-                        context=state.task_results,
-                        failed_dependency=dependency_task,
+                        failure_type,
                     )
 
-                    if recovery_result.get("success"):
+                    # ---------------------------------
+                    # TRANSIENT FAILURE
+                    # ---------------------------------
+
+                    if action == "retry":
 
                         print(
-                            "[Recovery] Repair completed."
+                            "[Retry] Transient failure. "
+                            "Retrying task directly."
                         )
 
-                        self.scheduler.reset_task_chain(
-                            state.tasks,
-                            task,
-                        )
+                        self.scheduler.reset_task(task)
 
                         continue
 
+                    # ---------------------------------
+                    # RECOVERABLE FAILURE
+                    # ---------------------------------
+
+                    if action == "recover":
+
+                        print(
+                            "[Recovery] Recoverable failure. "
+                            "Starting recovery."
+                        )
+
+                        dependency_task = None
+
+                        if task.depends_on:
+                            dependency_task = self.scheduler.get_task(
+                                state.tasks,
+                                task.depends_on[-1],
+                            )
+
+                        recovery_result = self.recovery.repair(
+                            task,
+                            error,
+                            context=state.task_results,
+                            failed_dependency=dependency_task,
+                        )
+
+                        if recovery_result.get("success"):
+
+                            print(
+                                "[Recovery] Repair completed."
+                            )
+
+                            self.scheduler.reset_task_chain(
+                                state.tasks,
+                                task,
+                            )
+
+                            continue
+
+                        print(
+                            "[Recovery] Unable to repair "
+                            "the problem."
+                        )
+
+                        self.scheduler.mark_failed(
+                            task,
+                            recovery_result.get("error"),
+                        )
+
+                        state.status = "failed"
+                        return state
+
+                    # ---------------------------------
+                    # Unknown action
+                    # ---------------------------------
+
                     print(
-                        "[Recovery] Unable to repair "
-                        "the problem."
+                        f"[Failure] Unknown failure action: "
+                        f"{action}"
                     )
 
                     self.scheduler.mark_failed(
                         task,
-                        recovery_result.get("error"),
+                        error,
                     )
 
                     state.status = "failed"
                     return state
-
-                # ---------------------------------
-                # Unknown action
-                # ---------------------------------
-
-                print(
-                    f"[Failure] Unknown failure action: "
-                    f"{action}"
-                )
-
-                self.scheduler.mark_failed(
-                    task,
-                    error,
-                )
-
-                state.status = "failed"
-                return state
 
         state.status = "completed"
 

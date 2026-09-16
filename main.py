@@ -21,6 +21,7 @@ def print_summary(state):
     print(f"Status: {state.status}")
 
     for task in state.tasks:
+
         line = f"  Task {task.step} [{task.status}] {task.objective}"
 
         if task.retries:
@@ -30,6 +31,9 @@ def print_summary(state):
             line += f" (failure_type: {task.failure_type})"
 
         print(line)
+
+    if state.trace_path:
+        print(f"\nFull trace: {state.trace_path}")
 
 
 def main():

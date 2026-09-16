@@ -24,6 +24,9 @@ class AgentState:
         self.iteration = 0
         self.status = "running"
 
+        # Path to this run's JSON trace file, set once the run finishes
+        self.trace_path = None
+
     def add_task_result(self, task, result):
 
         self.task_results[task.step] = result

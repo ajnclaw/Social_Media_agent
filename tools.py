@@ -377,8 +377,20 @@ class ToolManager:
         self.approval_manager = ApprovalManager()
 
         self.functions = TOOL_FUNCTIONS
+        self.logger = None
+
+    def set_logger(self, logger):
+        self.logger = logger
 
     def execute(self, tool_name, arguments):
+        result = self._execute(tool_name, arguments)
+
+        if self.logger:
+            self.logger.log_tool_call(tool_name, arguments, result)
+
+        return result
+
+    def _execute(self, tool_name, arguments):
 
         policy = self.approval_policy.check(tool_name)
 

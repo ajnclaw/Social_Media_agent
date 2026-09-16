@@ -7,6 +7,7 @@ from task import TASK_SUCCESS, TASK_FAILED
 from recovery import Recovery
 from failure import FailureClassifier
 from retry import RetryPolicy
+from logger import RunLogger
 
 
 class Agent:
@@ -21,44 +22,42 @@ class Agent:
 
     def run(self, user_input):
         state = AgentState(user_input)
+        run_logger = RunLogger(user_input)
 
-        print("\n=== PLANNING ===")
+        self.executor.tool_manager.set_logger(run_logger)
+        self.recovery.tool_manager.set_logger(run_logger)
 
         tasks = self.planner.plan(user_input)
         state.tasks = tasks
 
-        for task in tasks:
-            print(
-                f"Task {task.step}: "
-                f"{task.objective} "
-                f"(type={task.task_type}, "
-                f"depends_on={task.depends_on})"
-            )
-
-        print("\n=== EXECUTION ===")
+        run_logger.log_plan(tasks)
 
         while self.scheduler.has_unfinished_tasks(state.tasks):
-            ready_tasks = self.scheduler.get_ready_tasks(
-                state.tasks
-            )
+            ready_tasks = self.scheduler.get_ready_tasks(state.tasks)
 
             if not ready_tasks:
-                print("No ready tasks remain.")
+                run_logger.log_event(
+                    "no_ready_tasks",
+                    "No ready tasks remain.",
+                    level="warning",
+                )
                 break
 
             for task in ready_tasks:
-                print(
-                    f"\n--- Executing Task {task.step} ---"
+                run_logger.log_event(
+                    "task_start",
+                    f"--- Executing Task {task.step} ---",
+                    step=task.step,
                 )
 
                 state.current_task = task
                 self.scheduler.mark_running(task)
 
                 if task.task_type == "verification":
-
-                    print(
-                        f"[Verification] Checking result from "
-                        f"Task {task.depends_on[-1]}"
+                    run_logger.log_event(
+                        "verification_start",
+                        f"[Verification] Checking result from Task {task.depends_on[-1]}",
+                        step=task.step,
                     )
 
                     evaluation = self.evaluator.verify(
@@ -67,7 +66,6 @@ class Agent:
                     )
 
                 else:
-
                     result = self.executor.execute(
                         task,
                         context=state.task_results,
@@ -90,20 +88,23 @@ class Agent:
                         evaluation.get("output"),
                     )
 
-                    print(
-                        f"Task {task.step} completed."
+                    run_logger.log_event(
+                        "task_success",
+                        f"Task {task.step} completed.",
+                        step=task.step,
+                        output=evaluation.get("output"),
                     )
 
                 else:
                     error = evaluation.get("error")
 
-                    print(
-                        f"Task {task.step} failed: {error}"
+                    run_logger.log_event(
+                        "task_failure",
+                        f"Task {task.step} failed: {error}",
+                        level="warning",
+                        step=task.step,
+                        error=error,
                     )
-
-                    # ---------------------------------
-                    # Classify the failure
-                    # ---------------------------------
 
                     failure_type = self.failure_classifier.classify(
                         error,
@@ -120,14 +121,6 @@ class Agent:
                         }
                     )
 
-                    print(
-                        f"[Failure] Type: {failure_type}"
-                    )
-
-                    # ---------------------------------
-                    # Decide what to do
-                    # ---------------------------------
-
                     action = self.retry_policy.action(
                         task,
                         failure_type,
@@ -138,64 +131,55 @@ class Agent:
                         failure_type,
                     )
 
-                    print(
-                        f"[Retry Policy] Action: {action}, "
-                        f"Should retry: {should_retry}"
+                    run_logger.log_event(
+                        "failure_classified",
+                        f"[Failure] Type: {failure_type}. "
+                        f"Action: {action}, should_retry: {should_retry}",
+                        step=task.step,
+                        failure_type=failure_type,
+                        action=action,
+                        should_retry=should_retry,
                     )
 
                     if not should_retry:
-                        print(
-                            f"[Failure] Task {task.step} "
-                            f"will not be retried."
+                        run_logger.log_event(
+                            "give_up",
+                            f"[Failure] Task {task.step} will not be retried.",
+                            level="error",
+                            step=task.step,
                         )
 
-                        self.scheduler.mark_failed(
-                            task,
-                            error,
-                        )
+                        self.scheduler.mark_failed(task, error)
 
                         state.status = "failed"
+                        state.trace_path = run_logger.finalize(state)
                         return state
-
-                    # ---------------------------------
-                    # Consume a retry
-                    # ---------------------------------
 
                     task.retries += 1
 
-                    print(
-                        f"\n[Retry] Attempt "
-                        f"{task.retries}/{task.max_retries}"
+                    run_logger.log_event(
+                        "retry_attempt",
+                        f"[Retry] Attempt {task.retries}/{task.max_retries}",
+                        step=task.step,
+                        attempt=task.retries,
                     )
-                    self.retry_policy.wait(
-                        task,
-                        failure_type,
-                    )
-
-                    # ---------------------------------
-                    # TRANSIENT FAILURE
-                    # ---------------------------------
+                    self.retry_policy.wait(task, failure_type)
 
                     if action == "retry":
-
-                        print(
-                            "[Retry] Transient failure. "
-                            "Retrying task directly."
+                        run_logger.log_event(
+                            "retry_transient",
+                            "[Retry] Transient failure. Retrying task directly.",
+                            step=task.step,
                         )
 
                         self.scheduler.reset_task(task)
-
                         continue
 
-                    # ---------------------------------
-                    # RECOVERABLE FAILURE
-                    # ---------------------------------
-
                     if action == "recover":
-
-                        print(
-                            "[Recovery] Recoverable failure. "
-                            "Starting recovery."
+                        run_logger.log_event(
+                            "recovery_start",
+                            "[Recovery] Recoverable failure. Starting recovery.",
+                            step=task.step,
                         )
 
                         dependency_task = None
@@ -214,9 +198,10 @@ class Agent:
                         )
 
                         if recovery_result.get("success"):
-
-                            print(
-                                "[Recovery] Repair completed."
+                            run_logger.log_event(
+                                "recovery_success",
+                                "[Recovery] Repair completed.",
+                                step=task.step,
                             )
 
                             self.scheduler.reset_task_chain(
@@ -226,9 +211,12 @@ class Agent:
 
                             continue
 
-                        print(
-                            "[Recovery] Unable to repair "
-                            "the problem."
+                        run_logger.log_event(
+                            "recovery_failure",
+                            "[Recovery] Unable to repair the problem.",
+                            level="error",
+                            step=task.step,
+                            error=recovery_result.get("error"),
                         )
 
                         self.scheduler.mark_failed(
@@ -237,27 +225,24 @@ class Agent:
                         )
 
                         state.status = "failed"
+                        state.trace_path = run_logger.finalize(state)
                         return state
 
-                    # ---------------------------------
-                    # Unknown action
-                    # ---------------------------------
-
-                    print(
-                        f"[Failure] Unknown failure action: "
-                        f"{action}"
+                    run_logger.log_event(
+                        "unknown_action",
+                        f"[Failure] Unknown failure action: {action}",
+                        level="error",
+                        step=task.step,
+                        action=action,
                     )
 
-                    self.scheduler.mark_failed(
-                        task,
-                        error,
-                    )
+                    self.scheduler.mark_failed(task, error)
 
                     state.status = "failed"
+                    state.trace_path = run_logger.finalize(state)
                     return state
 
         state.status = "completed"
-
-        print("\n=== COMPLETE ===")
+        state.trace_path = run_logger.finalize(state)
 
         return state

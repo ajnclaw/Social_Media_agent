@@ -8,6 +8,10 @@ __pycache__/
 # pytest cache
 .pytest_cache/
 
+# Agent's file-tool sandbox (write_file/edit_file/run_command all
+# resolve here now, not the source tree)
+sandbox/
+
 # Agent runtime data (regenerated automatically, not source)
 memory.txt
 

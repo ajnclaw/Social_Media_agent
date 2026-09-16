@@ -5,7 +5,10 @@ from pathlib import Path
 
 MEMORY_FILE = "memory.txt"
 
-PROJECT_DIR = Path.cwd()
+PROJECT_ROOT = Path.cwd()
+
+SANDBOX_DIR = PROJECT_ROOT / "sandbox"
+SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_AGENT_NAME = "main"
 

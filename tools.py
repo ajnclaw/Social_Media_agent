@@ -4,7 +4,7 @@ import os
 import subprocess
 from pathlib import Path
 
-from config import PROJECT_DIR
+from config import PROJECT_ROOT, SANDBOX_DIR
 from memory import search_memory, save_memory
 from approval import ApprovalPolicy
 from approval_manager import ApprovalManager
@@ -34,7 +34,7 @@ def run_command(command):
             shell=True,
             capture_output=True,
             text=True,
-            cwd=PROJECT_DIR,
+            cwd=SANDBOX_DIR,
             timeout=30
         )
 
@@ -73,14 +73,14 @@ def tool_result(
 
 def safe_path(path):
 
-    target = (PROJECT_DIR / path).resolve()
+    target = (SANDBOX_DIR / path).resolve()
 
-    project_root = PROJECT_DIR.resolve()
+    sandbox_root = SANDBOX_DIR.resolve()
 
-    if not target.is_relative_to(project_root):
+    if not target.is_relative_to(sandbox_root):
 
         raise PermissionError(
-            "Access outside project directory denied."
+            "Access outside sandbox directory denied."
         )
 
     return target
@@ -91,13 +91,13 @@ def list_files():
 
         files = []
 
-        for path in PROJECT_DIR.rglob("*"):
+        for path in SANDBOX_DIR.rglob("*"):
 
             if path.is_file():
 
                 files.append(
                     str(
-                        path.relative_to(PROJECT_DIR)
+                        path.relative_to(SANDBOX_DIR)
                     )
                 )
 
@@ -251,9 +251,9 @@ def get_venv_python():
 
     if os.name == "nt":
 
-        return Path(".venv") / "Scripts" / "python.exe"
+        return PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 
-    return Path(".venv") / "bin" / "python"
+    return PROJECT_ROOT / ".venv" / "bin" / "python"
 
 def run_python_file(path):
 
@@ -287,7 +287,8 @@ def run_python_file(path):
             ],
             capture_output=True,
             text=True,
-            timeout=60
+            timeout=60,
+            cwd=SANDBOX_DIR
         )
 
         return tool_result(

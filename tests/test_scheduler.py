@@ -127,7 +127,7 @@ def test_reset_task_returns_to_ready_and_clears_result():
     assert task.error is None
 
 
-def test_reset_task_chain_resets_task_and_its_dependencies():
+def test_reset_task_chain_resets_task_and_its_immediate_dependency():
     grandparent = make_task(1, status=TASK_SUCCESS)
     parent = make_task(2, depends_on=[1], status=TASK_SUCCESS)
     child = make_task(3, depends_on=[2], status=TASK_FAILED)
@@ -135,6 +135,6 @@ def test_reset_task_chain_resets_task_and_its_dependencies():
 
     Scheduler().reset_task_chain(tasks, child)
 
-    assert grandparent.status == TASK_READY
+    assert grandparent.status == TASK_SUCCESS
     assert parent.status == TASK_READY
     assert child.status == TASK_READY

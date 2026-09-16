@@ -72,8 +72,11 @@ class Scheduler:
 
     def reset_task_chain(self, tasks, task):
         """
-        Reset the failed task and all of its dependencies
-        so the dependency chain can be executed again.
+        Reset the failed task and its immediate dependencies so the
+        scheduler re-runs them with fresh data. Does NOT walk further
+        back up the graph: Recovery repairs the underlying artifact
+        directly, so re-running an upstream creation task would just
+        overwrite that repair with its original, now-stale instructions.
         """
 
         self.reset_task(task)
@@ -87,10 +90,7 @@ class Scheduler:
 
             if dependency:
 
-                self.reset_task_chain(
-                    tasks,
-                    dependency,
-                )
+                self.reset_task(dependency)
 
     def mark_denied(self, task, error=None):
         task.status = TASK_DENIED

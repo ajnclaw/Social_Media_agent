@@ -1,0 +1,12 @@
+# Virtual environment
+.venv/
+
+# Python bytecode / cache
+__pycache__/
+*.pyc
+
+# Agent runtime data (regenerated automatically, not source)
+memory.txt
+
+# Local logs (once we add structured logging)
+logs/

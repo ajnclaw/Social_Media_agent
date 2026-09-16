@@ -3,6 +3,36 @@ from .tools import TOOL_SCHEMAS, ToolManager
 from .llm_client import chat
 
 
+REQUIRED_TOOL_BY_KEYWORD = {
+    "create": "write_file",
+    "write": "write_file",
+    "save": "write_file",
+    "modify": "edit_file",
+    "edit": "edit_file",
+    "read": "read_file",
+    "execute": "run_python_file",
+    "run": "run_python_file",
+    "search": "search_memory",
+}
+
+
+def expected_tools_for(objective):
+    """
+    Infer which tool name(s) are expected to satisfy this task's
+    objective, based on its verbs. Used so a later, unrelated
+    successful tool call (e.g. a diagnostic list_files call after a
+    failed run_python_file) can't be mistaken for evidence that the
+    task's actual operation succeeded.
+    """
+    objective = objective.lower()
+
+    return {
+        tool_name
+        for keyword, tool_name in REQUIRED_TOOL_BY_KEYWORD.items()
+        if keyword in objective
+    }
+
+
 SYSTEM_PROMPT = """
 You are an AI task executor.
 
@@ -53,6 +83,7 @@ class Executor:
             },
         ]
 
+        expected_tools = expected_tools_for(task.objective)
         last_tool_output = None
 
         for iteration in range(max_iterations):
@@ -120,7 +151,9 @@ class Executor:
 
 
 
-                if result.get("success"):
+                if result.get("success") and (
+                    not expected_tools or tool_name in expected_tools
+                ):
                     last_tool_output = result.get("output")
 
                 messages.append(

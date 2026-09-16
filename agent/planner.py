@@ -85,6 +85,31 @@ Example:
 """
 
 
+def build_tasks(data):
+    """
+    Convert the planner's parsed JSON response into Task objects.
+    Tolerates a bare list of tasks (no {"tasks": [...]} wrapper) and
+    a missing "step" field -- both of which a small local model
+    occasionally produces despite the system prompt's schema.
+    """
+    tasks_data = data if isinstance(data, list) else data.get("tasks", [])
+
+    tasks = []
+
+    for index, item in enumerate(tasks_data, start=1):
+        task = Task(
+            step=item.get("step", index),
+            objective=item["objective"],
+            depends_on=item.get("depends_on", []),
+            expected_output=item.get("expected_output"),
+            task_type=item.get("task_type", "execution"),
+        )
+
+        tasks.append(task)
+
+    return tasks
+
+
 class Planner:
     def __init__(self, model=DEFAULT_MODEL):
         self.model = model
@@ -105,21 +130,6 @@ class Planner:
         )
 
         content = response["message"]["content"]
-
-
         data = json.loads(content)
 
-        tasks = []
-
-        for item in data["tasks"]:
-            task = Task(
-                step=item["step"],
-                objective=item["objective"],
-                depends_on=item.get("depends_on", []),
-                expected_output=item.get("expected_output"),
-                task_type=item.get("task_type", "execution"),
-            )
-
-            tasks.append(task)
-
-        return tasks
+        return build_tasks(data)

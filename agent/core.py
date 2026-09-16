@@ -30,7 +30,19 @@ class Agent:
         self.recovery.set_logger(run_logger)
         self.recovery.tool_manager.set_logger(run_logger)
 
-        tasks = self.planner.plan(user_input)
+        try:
+            tasks = self.planner.plan(user_input)
+        except Exception as exc:
+            run_logger.log_event(
+                "planning_failed",
+                f"Planning failed: {exc}",
+                level="error",
+            )
+
+            state.status = "failed"
+            state.trace_path = run_logger.finalize(state)
+            return state
+
         state.tasks = tasks
 
         run_logger.log_plan(tasks)

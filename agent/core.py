@@ -32,6 +32,7 @@ class Agent:
         self.recovery.set_logger(run_logger)
         self.recovery.tool_manager.set_logger(run_logger)
         self.responder.set_logger(run_logger)
+        self.responder.tool_manager.set_logger(run_logger)
 
         try:
             tasks = self.planner.plan(user_input, history=history)

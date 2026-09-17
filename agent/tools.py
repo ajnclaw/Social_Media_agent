@@ -681,7 +681,12 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "search_memory",
-            "description": "Search persistent agent memory.",
+            "description": (
+                "Search persistent agent memory for saved facts. "
+                "Returns the best-matching facts ranked by relevance, "
+                "or every saved fact if nothing closely matches the "
+                "query -- treat weakly-related results accordingly."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {

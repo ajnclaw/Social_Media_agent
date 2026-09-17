@@ -33,6 +33,17 @@ API_REGISTRY = {
         "Free currency exchange rate API, no key required. "
         "Example: https://api.frankfurter.app/latest?from=USD&to=EUR"
     ),
+    "ipapi.co": (
+        "Free IP-based geolocation API, no key required. Returns the "
+        "approximate location (city, region, country, latitude, "
+        "longitude, timezone) of the network making the request. This "
+        "is NOT exact GPS location -- it can be inaccurate for VPNs "
+        "or mobile networks, and should be presented to the user as "
+        "an approximation, not a certainty. Useful for inferring a "
+        "location when the user hasn't given one, e.g. before calling "
+        "the weather API. Example: https://ipapi.co/json/ "
+        "(no parameters needed)."
+    ),
 }
 
 ALLOWED_API_DOMAINS = set(API_REGISTRY)

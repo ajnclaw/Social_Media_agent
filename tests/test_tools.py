@@ -8,6 +8,10 @@ def test_allows_https_request_to_known_domain():
     assert is_allowed_api_url("https://api.open-meteo.com/v1/forecast") is True
 
 
+def test_allows_https_request_to_geolocation_domain():
+    assert is_allowed_api_url("https://ipapi.co/json/") is True
+
+
 def test_rejects_unknown_domain():
     assert is_allowed_api_url("https://evil.example.com/steal") is False
 

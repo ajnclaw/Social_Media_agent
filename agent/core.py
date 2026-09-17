@@ -20,7 +20,7 @@ class Agent:
         self.failure_classifier = FailureClassifier()
         self.retry_policy = RetryPolicy()
 
-    def run(self, user_input):
+    def run(self, user_input, history=None):
         state = AgentState(user_input)
         run_logger = RunLogger(user_input)
 
@@ -31,7 +31,7 @@ class Agent:
         self.recovery.tool_manager.set_logger(run_logger)
 
         try:
-            tasks = self.planner.plan(user_input)
+            tasks = self.planner.plan(user_input, history=history)
         except Exception as exc:
             run_logger.log_event(
                 "planning_failed",

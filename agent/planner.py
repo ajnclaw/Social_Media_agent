@@ -110,6 +110,40 @@ def build_tasks(data):
     return tasks
 
 
+MAX_HISTORY_TURNS = 5
+
+
+def build_prompt_with_history(user_input, history=None):
+    """
+    Combine the new request with a bounded window of prior chat turns,
+    so the planner can resolve references like "run it" or "that file"
+    to something a previous turn created. Capped to the most recent
+    turns so a long chat session doesn't grow the prompt unbounded.
+    """
+    if not history:
+        return user_input
+
+    lines = ["Conversation so far:"]
+
+    for turn in history[-MAX_HISTORY_TURNS:]:
+        lines.append(f"- User asked: {turn['user_input']}")
+        lines.append(f"  Result: {turn['status']}")
+
+        for task_line in turn.get("tasks", []):
+            lines.append(f"    {task_line}")
+
+    lines.append("")
+    lines.append(f"New request: {user_input}")
+    lines.append("")
+    lines.append(
+        "Only plan for the new request above. Use the conversation "
+        "history only to resolve references like 'it' or 'that file', "
+        "and to know what already exists from previous turns."
+    )
+
+    return "\n".join(lines)
+
+
 class Planner:
     def __init__(self, model=DEFAULT_MODEL):
         self.model = model
@@ -118,13 +152,15 @@ class Planner:
     def set_logger(self, logger):
         self.logger = logger
 
-    def plan(self, user_input):
+    def plan(self, user_input, history=None):
+        prompt = build_prompt_with_history(user_input, history)
+
         response = chat(
             "planner",
             self.model,
             [
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_input},
+                {"role": "user", "content": prompt},
             ],
             logger=self.logger,
         )

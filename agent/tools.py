@@ -433,11 +433,11 @@ def search_memory_tool(query):
             error=str(e)
         )
 
-def save_memory_tool(content):
+def save_memory_tool(key, value):
 
     try:
 
-        result = save_memory(content)
+        result = save_memory(key, value)
 
         return tool_result(
             success=True,
@@ -698,16 +698,27 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "save_memory",
-            "description": "Save information to persistent agent memory.",
+            "description": (
+                "Save a fact to persistent agent memory as a key/value "
+                "pair. Saving the same key again overwrites the "
+                "previous value instead of creating a duplicate -- use "
+                "a short, stable key (e.g. 'location', "
+                "'favorite_language') so updates replace old facts "
+                "instead of piling up."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "content": {
+                    "key": {
                         "type": "string",
-                        "description": "Information to remember.",
-                    }
+                        "description": "Short stable identifier for this fact, e.g. 'location'.",
+                    },
+                    "value": {
+                        "type": "string",
+                        "description": "The value to remember for this key.",
+                    },
                 },
-                "required": ["content"],
+                "required": ["key", "value"],
             },
         },
     },

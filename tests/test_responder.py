@@ -1,11 +1,12 @@
 from agent.responder import RESPONDER_TOOL_NAMES, RESPONDER_TOOL_SCHEMAS
 
 
-def test_responder_tool_names_are_read_only_plus_call_api():
+def test_responder_tool_names_are_read_only_plus_call_api_and_save_memory():
     assert RESPONDER_TOOL_NAMES == {
         "list_files",
         "read_file",
         "search_memory",
+        "save_memory",
         "call_api",
     }
 
@@ -25,6 +26,5 @@ def test_responder_schemas_exclude_mutating_tools():
         "create_directory",
         "run_command",
         "run_python_file",
-        "save_memory",
     ):
         assert mutating_tool not in schema_names

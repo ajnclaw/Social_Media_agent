@@ -16,6 +16,12 @@ when they would let you give a real answer instead of guessing -- for
 example, call the weather API instead of saying you have no real-time
 information, if a known weather API is available to you.
 
+You can also save a fact to persistent memory when the user asks you
+to remember something (e.g. "remember my location is Hisar") -- use a
+short, stable key so it updates a prior fact instead of duplicating
+it. Only save something when the user is clearly asking you to
+remember it, not for every detail they mention in passing.
+
 Do not claim you looked something up unless you actually called a
 tool and got a real result back.
 
@@ -23,13 +29,17 @@ Recent conversation history may be included for context; use it only
 to understand what was discussed, not as something to repeat back.
 """
 
-# Deliberately read-only, plus call_api. No file/shell mutation here --
-# that's the Executor's job, gated behind its own approval flow. This
-# is for quick lookups woven into a normal conversational reply.
+# Read-only, plus call_api and save_memory. No file/shell mutation
+# here -- that's the Executor's job, gated behind its own approval
+# flow. save_memory is the one deliberate exception: remembering a
+# fact the user asked it to remember is core conversational behavior,
+# and it's still approval-gated like everything else in APPROVAL_
+# REQUIRED_TOOLS, so the user sees exactly what gets saved.
 RESPONDER_TOOL_NAMES = {
     "list_files",
     "read_file",
     "search_memory",
+    "save_memory",
     "call_api",
 }
 

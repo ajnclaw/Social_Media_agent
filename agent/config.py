@@ -3,7 +3,7 @@
 from pathlib import Path
 
 
-MEMORY_FILE = "memory.txt"
+MEMORY_FILE = "memory.json"
 
 PROJECT_ROOT = Path.cwd()
 

@@ -13,6 +13,7 @@ __pycache__/
 sandbox/
 
 # Agent runtime data (regenerated automatically, not source)
+memory.json
 memory.txt
 
 # Local logs (once we add structured logging)

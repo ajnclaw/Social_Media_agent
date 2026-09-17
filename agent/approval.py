@@ -16,6 +16,7 @@ class ApprovalPolicy:
         "edit_file",
         "save_memory",
         "run_command",
+        "call_api",
     }
 
     def requires_approval(self, tool_name):

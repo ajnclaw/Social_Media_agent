@@ -2,6 +2,9 @@
 
 import os
 import subprocess
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 from .config import PROJECT_ROOT, SANDBOX_DIR
@@ -15,6 +18,85 @@ ALLOWED_COMMANDS = {
     "ls",
     "whoami",
 }
+
+# Known external APIs the agent is allowed to call with call_api.
+# Each is free and requires no API key -- this is a curated allowlist,
+# not open internet access. Adding a new API means adding it here
+# deliberately, the same way ALLOWED_COMMANDS works for shell commands.
+API_REGISTRY = {
+    "api.open-meteo.com": (
+        "Free weather forecast API, no key required. "
+        "Example: https://api.open-meteo.com/v1/forecast"
+        "?latitude=51.5&longitude=-0.12&current_weather=true"
+    ),
+    "api.frankfurter.app": (
+        "Free currency exchange rate API, no key required. "
+        "Example: https://api.frankfurter.app/latest?from=USD&to=EUR"
+    ),
+}
+
+ALLOWED_API_DOMAINS = set(API_REGISTRY)
+
+
+def is_allowed_api_url(url):
+    parsed = urllib.parse.urlparse(url)
+
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname in ALLOWED_API_DOMAINS
+    )
+
+
+def call_api(url, params=None):
+
+    try:
+
+        if not is_allowed_api_url(url):
+
+            return tool_result(
+                success=False,
+                error=(
+                    f"URL not allowed: {url}. Only https requests to "
+                    f"{sorted(ALLOWED_API_DOMAINS)} are permitted."
+                ),
+            )
+
+        if params:
+            parsed = urllib.parse.urlparse(url)
+            query = urllib.parse.urlencode(params)
+            separator = "&" if parsed.query else "?"
+            url = f"{url}{separator}{query}"
+
+        request = urllib.request.Request(
+            url,
+            method="GET",
+            headers={"User-Agent": "ai-agent/1.0"},
+        )
+
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = response.read(1_000_000).decode(
+                "utf-8",
+                errors="replace",
+            )
+
+        return tool_result(
+            success=True,
+            output=body,
+        )
+
+    except urllib.error.URLError as e:
+
+        return tool_result(
+            success=False,
+            error=f"Request failed: {e}",
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e),
+        )
 
 def run_command(command):
 
@@ -366,6 +448,8 @@ TOOL_FUNCTIONS = {
     "save_memory": save_memory_tool,
 
     "run_command": run_command,
+
+    "call_api": call_api,
 }
 
 
@@ -454,6 +538,12 @@ class ToolManager:
                 success=False,
                 error=str(exc),
             )
+
+
+_API_REGISTRY_DESCRIPTION = "\n".join(
+    f"- {domain}: {description}"
+    for domain, description in API_REGISTRY.items()
+)
 
 
 TOOL_SCHEMAS = [
@@ -613,6 +703,33 @@ TOOL_SCHEMAS = [
                     }
                 },
                 "required": ["command"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "call_api",
+            "description": (
+                "Make a GET request to a known external API when a task "
+                "needs real-world information no local tool can provide "
+                "(e.g. current weather, exchange rates). Only the "
+                "pre-approved domains below are allowed -- any other URL "
+                "is rejected.\n\n" + _API_REGISTRY_DESCRIPTION
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "Full HTTPS URL of the API endpoint to call.",
+                    },
+                    "params": {
+                        "type": "object",
+                        "description": "Optional query parameters to append to the URL.",
+                    },
+                },
+                "required": ["url"],
             },
         },
     },

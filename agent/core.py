@@ -8,6 +8,7 @@ from .recovery import Recovery
 from .failure import FailureClassifier
 from .retry import RetryPolicy
 from .logger import RunLogger
+from .responder import Responder
 
 
 class Agent:
@@ -19,6 +20,7 @@ class Agent:
         self.recovery = Recovery()
         self.failure_classifier = FailureClassifier()
         self.retry_policy = RetryPolicy()
+        self.responder = Responder()
 
     def run(self, user_input, history=None):
         state = AgentState(user_input)
@@ -29,6 +31,7 @@ class Agent:
         self.executor.tool_manager.set_logger(run_logger)
         self.recovery.set_logger(run_logger)
         self.recovery.tool_manager.set_logger(run_logger)
+        self.responder.set_logger(run_logger)
 
         try:
             tasks = self.planner.plan(user_input, history=history)
@@ -46,6 +49,19 @@ class Agent:
         state.tasks = tasks
 
         run_logger.log_plan(tasks)
+
+        if not tasks:
+            reply = self.responder.respond(user_input, history=history)
+
+            run_logger.log_event(
+                "conversational_reply",
+                reply,
+            )
+
+            state.reply = reply
+            state.status = "completed"
+            state.trace_path = run_logger.finalize(state)
+            return state
 
         while self.scheduler.has_unfinished_tasks(state.tasks):
             ready_tasks = self.scheduler.get_ready_tasks(state.tasks)

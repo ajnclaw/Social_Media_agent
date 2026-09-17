@@ -9,18 +9,21 @@ def summarize_tasks(state):
 
 
 def print_summary(state):
-    print(f"\nStatus: {state.status}")
+    if state.reply:
+        print(f"\nagent: {state.reply}")
+    else:
+        print(f"\nStatus: {state.status}")
 
-    for task in state.tasks:
-        line = f"  Task {task.step} [{task.status}] {task.objective}"
+        for task in state.tasks:
+            line = f"  Task {task.step} [{task.status}] {task.objective}"
 
-        if task.retries:
-            line += f" (retries: {task.retries})"
+            if task.retries:
+                line += f" (retries: {task.retries})"
 
-        if task.failure_type:
-            line += f" (failure_type: {task.failure_type})"
+            if task.failure_type:
+                line += f" (failure_type: {task.failure_type})"
 
-        print(line)
+            print(line)
 
     if state.trace_path:
         print(f"Trace: {state.trace_path}")

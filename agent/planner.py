@@ -113,35 +113,45 @@ def build_tasks(data):
 MAX_HISTORY_TURNS = 5
 
 
-def build_prompt_with_history(user_input, history=None):
+def format_history(history, max_turns=MAX_HISTORY_TURNS):
     """
-    Combine the new request with a bounded window of prior chat turns,
-    so the planner can resolve references like "run it" or "that file"
-    to something a previous turn created. Capped to the most recent
-    turns so a long chat session doesn't grow the prompt unbounded.
+    Render a bounded window of prior chat turns as plain text, capped
+    to the most recent turns so a long chat session doesn't grow the
+    prompt unbounded. Shared between the planner and the responder.
     """
     if not history:
-        return user_input
+        return ""
 
     lines = ["Conversation so far:"]
 
-    for turn in history[-MAX_HISTORY_TURNS:]:
+    for turn in history[-max_turns:]:
         lines.append(f"- User asked: {turn['user_input']}")
         lines.append(f"  Result: {turn['status']}")
 
         for task_line in turn.get("tasks", []):
             lines.append(f"    {task_line}")
 
-    lines.append("")
-    lines.append(f"New request: {user_input}")
-    lines.append("")
-    lines.append(
+    return "\n".join(lines)
+
+
+def build_prompt_with_history(user_input, history=None):
+    """
+    Combine the new request with a bounded window of prior chat turns,
+    so the planner can resolve references like "run it" or "that file"
+    to something a previous turn created.
+    """
+    history_text = format_history(history)
+
+    if not history_text:
+        return user_input
+
+    return (
+        f"{history_text}\n\n"
+        f"New request: {user_input}\n\n"
         "Only plan for the new request above. Use the conversation "
         "history only to resolve references like 'it' or 'that file', "
         "and to know what already exists from previous turns."
     )
-
-    return "\n".join(lines)
 
 
 class Planner:

@@ -1,4 +1,24 @@
-from agent.planner import build_prompt_with_history
+from agent.planner import build_prompt_with_history, format_history
+
+
+def test_format_history_returns_empty_string_for_no_history():
+    assert format_history(None) == ""
+    assert format_history([]) == ""
+
+
+def test_format_history_renders_turns_without_planner_specific_framing():
+    history = [
+        {
+            "user_input": "hi",
+            "status": "completed",
+            "tasks": [],
+        }
+    ]
+
+    text = format_history(history)
+
+    assert "User asked: hi" in text
+    assert "Only plan for" not in text
 
 
 def test_no_history_returns_plain_user_input():

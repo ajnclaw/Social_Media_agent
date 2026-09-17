@@ -18,6 +18,10 @@ def parse_args():
 
 def print_summary(state):
     print("\n=== SUMMARY ===")
+
+    if state.reply:
+        print(f"Reply: {state.reply}")
+
     print(f"Status: {state.status}")
 
     for task in state.tasks:

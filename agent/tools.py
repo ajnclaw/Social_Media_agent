@@ -39,10 +39,21 @@ API_REGISTRY = {
         "longitude, timezone) of the network making the request. This "
         "is NOT exact GPS location -- it can be inaccurate for VPNs "
         "or mobile networks, and should be presented to the user as "
-        "an approximation, not a certainty. Useful for inferring a "
-        "location when the user hasn't given one, e.g. before calling "
-        "the weather API. Example: https://ipapi.co/json/ "
+        "an approximation, not a certainty. Useful ONLY as a fallback "
+        "when the user hasn't named a specific place -- if the user "
+        "names a city by name, use geocoding-api.open-meteo.com "
+        "instead, since it resolves the exact place they meant rather "
+        "than guessing from network IP. Example: https://ipapi.co/json/ "
         "(no parameters needed)."
+    ),
+    "geocoding-api.open-meteo.com": (
+        "Free geocoding API, no key required. Converts a place name "
+        "into coordinates (latitude/longitude) that can then be passed "
+        "to api.open-meteo.com for weather. Always use this when the "
+        "user names a specific city, rather than guessing coordinates "
+        "from memory or falling back to IP geolocation. "
+        "Example: https://geocoding-api.open-meteo.com/v1/search"
+        "?name=Hisar&count=1"
     ),
 }
 

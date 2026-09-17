@@ -12,6 +12,10 @@ def test_allows_https_request_to_geolocation_domain():
     assert is_allowed_api_url("https://ipapi.co/json/") is True
 
 
+def test_allows_https_request_to_geocoding_domain():
+    assert is_allowed_api_url("https://geocoding-api.open-meteo.com/v1/search") is True
+
+
 def test_rejects_unknown_domain():
     assert is_allowed_api_url("https://evil.example.com/steal") is False
 

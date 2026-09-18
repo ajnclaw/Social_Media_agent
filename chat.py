@@ -57,6 +57,7 @@ def main():
         history.append({
             "user_input": user_input,
             "status": state.status,
+            "reply": state.reply,
             "tasks": summarize_tasks(state),
         })
 

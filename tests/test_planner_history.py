@@ -21,6 +21,37 @@ def test_format_history_renders_turns_without_planner_specific_framing():
     assert "Only plan for" not in text
 
 
+def test_format_history_includes_prior_assistant_reply():
+    history = [
+        {
+            "user_input": "am i underweight?",
+            "status": "completed",
+            "reply": "Your BMI is 31 (weight: 103.5 kg, height: 6 ft), which is obese.",
+            "tasks": [],
+        }
+    ]
+
+    text = format_history(history)
+
+    assert "Assistant replied: Your BMI is 31" in text
+    assert "height: 6 ft" in text
+
+
+def test_format_history_omits_reply_line_when_none():
+    history = [
+        {
+            "user_input": "Create hello.py",
+            "status": "completed",
+            "reply": None,
+            "tasks": ["Task 1: Create hello.py -> success"],
+        }
+    ]
+
+    text = format_history(history)
+
+    assert "Assistant replied" not in text
+
+
 def test_no_history_returns_plain_user_input():
     assert build_prompt_with_history("Create hello.py", None) == "Create hello.py"
 

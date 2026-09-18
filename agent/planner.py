@@ -160,6 +160,9 @@ def format_history(history, max_turns=MAX_HISTORY_TURNS):
         lines.append(f"- User asked: {turn['user_input']}")
         lines.append(f"  Result: {turn['status']}")
 
+        if turn.get("reply"):
+            lines.append(f"  Assistant replied: {turn['reply']}")
+
         for task_line in turn.get("tasks", []):
             lines.append(f"    {task_line}")
 

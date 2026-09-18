@@ -1,4 +1,4 @@
-from .planner import Planner
+from .planner import Planner, find_self_dependent_tasks
 from .scheduler import Scheduler
 from .executor import Executor
 from .evaluator import Evaluator
@@ -64,6 +64,21 @@ class Agent:
             state.trace_path = run_logger.finalize(state)
             return state
 
+        self_dependent = find_self_dependent_tasks(tasks)
+
+        if self_dependent:
+            steps = ", ".join(str(task.step) for task in self_dependent)
+
+            run_logger.log_event(
+                "invalid_plan",
+                f"Planner produced task(s) that depend on themselves: {steps}",
+                level="error",
+            )
+
+            state.status = "failed"
+            state.trace_path = run_logger.finalize(state)
+            return state
+
         while self.scheduler.has_unfinished_tasks(state.tasks):
             ready_tasks = self.scheduler.get_ready_tasks(state.tasks)
 
@@ -86,9 +101,13 @@ class Agent:
                 self.scheduler.mark_running(task)
 
                 if task.task_type == "verification":
+                    dependency_step = (
+                        task.depends_on[-1] if task.depends_on else "unknown"
+                    )
+
                     run_logger.log_event(
                         "verification_start",
-                        f"[Verification] Checking result from Task {task.depends_on[-1]}",
+                        f"[Verification] Checking result from Task {dependency_step}",
                         step=task.step,
                     )
 

@@ -1,4 +1,4 @@
-from agent.planner import build_tasks
+from agent.planner import build_tasks, find_self_dependent_tasks
 
 
 def test_build_tasks_from_wrapped_dict():
@@ -60,3 +60,40 @@ def test_build_tasks_defaults_task_type_to_execution():
 
 def test_build_tasks_empty_tasks_list_returns_empty():
     assert build_tasks({"tasks": []}) == []
+
+
+def test_find_self_dependent_tasks_detects_self_reference():
+    data = {
+        "tasks": [
+            {
+                "step": 1,
+                "objective": "Verify something impossible",
+                "depends_on": [1],
+                "expected_output": "X",
+                "task_type": "verification",
+            }
+        ]
+    }
+
+    tasks = build_tasks(data)
+    self_dependent = find_self_dependent_tasks(tasks)
+
+    assert len(self_dependent) == 1
+    assert self_dependent[0].step == 1
+
+
+def test_find_self_dependent_tasks_ignores_valid_dependencies():
+    data = {
+        "tasks": [
+            {"step": 1, "objective": "Create hello.py", "depends_on": []},
+            {"step": 2, "objective": "Run hello.py", "depends_on": [1]},
+        ]
+    }
+
+    tasks = build_tasks(data)
+
+    assert find_self_dependent_tasks(tasks) == []
+
+
+def test_find_self_dependent_tasks_returns_empty_for_no_tasks():
+    assert find_self_dependent_tasks([]) == []

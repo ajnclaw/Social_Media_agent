@@ -55,6 +55,16 @@ Rules:
 14. Only create or modify something when that operation is explicitly
     part of the user's request.
 
+15. A verification task must depend on an actual execution task that
+    exists earlier in this same plan. Never give a verification task
+    an empty depends_on, and never make a task depend on its own step
+    number -- a task cannot verify itself.
+
+16. If the request is a question you cannot answer by performing a
+    real operation (e.g. a question about the user, or something you
+    have no way to look up or execute), do not invent a verification
+    task with nothing behind it. Return {"tasks": []} instead.
+
 Example:
 
 {
@@ -108,6 +118,19 @@ def build_tasks(data):
         tasks.append(task)
 
     return tasks
+
+
+def find_self_dependent_tasks(tasks):
+    """
+    Return any tasks whose depends_on includes their own step number.
+    The scheduler can never mark a self-dependent task ready (it waits
+    forever on its own success), so this deadlocks silently -- caught
+    here as an explicit planning failure instead. This only catches a
+    direct self-reference (A depends on A), not longer cycles
+    (A depends on B depends on A); full cycle detection is a bigger
+    fix for if that's ever actually observed.
+    """
+    return [task for task in tasks if task.step in task.depends_on]
 
 
 MAX_HISTORY_TURNS = 5

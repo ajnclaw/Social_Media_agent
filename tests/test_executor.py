@@ -31,3 +31,10 @@ def test_expected_tools_for_multiple_keywords_returns_multiple_tools():
 
 def test_expected_tools_for_is_case_insensitive():
     assert expected_tools_for("CREATE hello.py") == {"write_file"}
+
+
+def test_expected_tools_for_read_memory_json_also_accepts_search_memory():
+    # A Planner slip-up (memory.json isn't a real readable file) --
+    # search_memory succeeding should still count as valid evidence
+    # even though the objective says "Read".
+    assert expected_tools_for("Read memory.json") == {"read_file", "search_memory"}

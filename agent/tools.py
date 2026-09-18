@@ -7,7 +7,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-from .config import PROJECT_ROOT, SANDBOX_DIR
+from .config import MEMORY_FILE, PROJECT_ROOT, SANDBOX_DIR
 from .memory import search_memory, save_memory
 from .approval import ApprovalPolicy
 from .approval_manager import ApprovalManager
@@ -257,6 +257,16 @@ def create_directory(path):
 def read_file(path):
 
     try:
+
+        if Path(path).name == Path(MEMORY_FILE).name:
+
+            return tool_result(
+                success=False,
+                error=(
+                    "Persistent agent memory isn't a readable file -- "
+                    "use the search_memory tool instead."
+                ),
+            )
 
         target = safe_path(path)
 

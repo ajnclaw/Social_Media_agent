@@ -65,6 +65,15 @@ Rules:
     have no way to look up or execute), do not invent a verification
     task with nothing behind it. Return {"tasks": []} instead.
 
+17. The agent's persistent memory is NOT a regular file, even though
+    it happens to be stored as one. Never create a task that reads
+    "memory.json" or treats memory as something to open with a file
+    tool. A request to check, search, or recall saved information
+    should either be left with no tasks (return {"tasks": []} and let
+    the assistant handle it conversationally) or, if it's genuinely
+    part of a larger operation, phrased as an objective like "Search
+    memory for X" -- never "Read memory.json".
+
 Example:
 
 {

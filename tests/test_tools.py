@@ -4,6 +4,7 @@ from agent.config import SANDBOX_DIR
 from agent.tools import (
     build_request_url,
     is_allowed_api_url,
+    read_file,
     safe_path,
     TOOL_PREVIEW_BUILDERS,
 )
@@ -81,3 +82,17 @@ def test_call_api_preview_shows_the_exact_url_that_will_be_sent():
     )
 
     assert "https://api.frankfurter.app/latest?from=USD&to=EUR" in preview
+
+
+def test_read_file_redirects_attempts_to_read_the_memory_file():
+    result = read_file("memory.json")
+
+    assert result["success"] is False
+    assert "search_memory" in result["error"]
+
+
+def test_read_file_redirects_even_with_a_path_prefix():
+    result = read_file("some/path/memory.json")
+
+    assert result["success"] is False
+    assert "search_memory" in result["error"]

@@ -13,6 +13,12 @@ REQUIRED_TOOL_BY_KEYWORD = {
     "execute": "run_python_file",
     "run": "run_python_file",
     "search": "search_memory",
+    # A task objective mentioning "memory" (e.g. "Read memory.json",
+    # a Planner slip-up memory.json isn't actually a readable file --
+    # search_memory is the real mechanism) should still accept a
+    # successful search_memory call as valid evidence, on top of
+    # whatever the objective's other verb implies.
+    "memory": "search_memory",
 }
 
 

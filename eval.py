@@ -9,7 +9,8 @@ import time
 os.environ["AGENT_AUTO_APPROVE"] = "1"
 
 from agent import Agent
-from agent.config import SANDBOX_DIR
+from agent.config import PROJECT_ROOT, SANDBOX_DIR
+import agent.memory as memory_module
 
 
 def reset_sandbox():
@@ -60,6 +61,66 @@ SCENARIOS = [
         "expected_status": "completed",
     },
 ]
+
+
+def run_memory_scenario():
+    """
+    Tests that a fact saved in one session is correctly recalled by a
+    completely separate Agent instance -- the thing that actually
+    matters about persistent memory, not just that the file writes
+    correctly (already covered by tests/test_memory.py).
+
+    Uses a scratch memory file for the duration of this scenario only,
+    swapped back afterward -- this must NEVER touch the real
+    memory.json, since that holds actual saved facts, not test data.
+    """
+    print("\n" + "#" * 70)
+    print("# SCENARIO: memory_recall_across_sessions")
+    print("#" * 70)
+
+    original_memory_file = memory_module.MEMORY_FILE
+    scratch_memory_file = PROJECT_ROOT / "_eval_memory_scratch.json"
+    memory_module.MEMORY_FILE = scratch_memory_file
+
+    started = time.time()
+    state2 = None
+
+    try:
+        agent1 = Agent()
+        state1 = agent1.run("Remember that my favorite color is teal")
+
+        agent2 = Agent()
+        state2 = agent2.run("what's my favorite color?")
+
+        status = state2.status
+        error = None
+        passed = (
+            state1.status == "completed"
+            and state2.status == "completed"
+            and state2.reply is not None
+            and "teal" in state2.reply.lower()
+        )
+    except Exception as exc:
+        status = "error"
+        error = str(exc)
+        passed = False
+    finally:
+        memory_module.MEMORY_FILE = original_memory_file
+        scratch_memory_file.unlink(missing_ok=True)
+
+    duration = round(time.time() - started, 2)
+
+    return {
+        "name": "memory_recall_across_sessions",
+        "expected_status": "completed (with correct recall)",
+        "actual_status": status,
+        "passed": passed,
+        "duration": duration,
+        "total_retries": 0,
+        "recoveries": 0,
+        "error": error,
+        "trace_path": str(state2.trace_path) if state2 and state2.trace_path else None,
+    }
 
 
 def run_scenario(scenario):
@@ -115,6 +176,7 @@ def main():
     )
 
     results = [run_scenario(scenario) for scenario in SCENARIOS]
+    results.append(run_memory_scenario())
 
     print("\n" + "=" * 70)
     print("EVAL SUMMARY")

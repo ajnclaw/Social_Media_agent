@@ -709,7 +709,12 @@ TOOL_SCHEMAS = [
                 "previous value instead of creating a duplicate -- use "
                 "a short, stable key (e.g. 'location', "
                 "'favorite_language') so updates replace old facts "
-                "instead of piling up."
+                "instead of piling up. The result lists other saved "
+                "keys -- before inventing a new key, check whether one "
+                "of them already covers the same concept (e.g. don't "
+                "save 'current_city' if 'location' already exists for "
+                "it) and reuse that key instead of fragmenting the "
+                "same fact across multiple keys."
             ),
             "parameters": {
                 "type": "object",

@@ -29,6 +29,22 @@ def test_save_memory_overwrites_existing_key_instead_of_duplicating(temp_memory_
     assert data == {"location": "Hisar"}
 
 
+def test_save_memory_result_lists_other_existing_keys(temp_memory_file):
+    memory.save_memory("location", "Hisar")
+
+    result = memory.save_memory("hometown", "Chandigarh")
+
+    assert "Saved: hometown = Chandigarh" in result
+    assert "Other saved keys: location" in result
+
+
+def test_save_memory_result_omits_key_list_when_no_other_keys(temp_memory_file):
+    result = memory.save_memory("location", "Hisar")
+
+    assert result == "Saved: location = Hisar"
+    assert "Other saved keys" not in result
+
+
 def test_save_memory_keeps_unrelated_keys(temp_memory_file):
     memory.save_memory("location", "Hisar")
     memory.save_memory("favorite_language", "Python")

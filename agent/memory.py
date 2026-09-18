@@ -33,7 +33,20 @@ def save_memory(key, value):
     data[key] = value
     _save_all(data)
 
-    return f"Saved: {key} = {value}"
+    result = f"Saved: {key} = {value}"
+
+    other_keys = sorted(k for k in data if k != key)
+
+    if other_keys:
+        # Surface what else is already saved so the model can notice
+        # on its own if a new key fragments a fact an existing key
+        # already covers (e.g. saving "current_city" when "location"
+        # already exists) -- string-matching can't reliably tell that
+        # apart from coincidental overlap, but the model's own
+        # judgment can, given visibility into what's already there.
+        result += f"\nOther saved keys: {', '.join(other_keys)}"
+
+    return result
 
 
 def _tokenize(text):

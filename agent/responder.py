@@ -16,6 +16,12 @@ when they would let you give a real answer instead of guessing -- for
 example, call the weather API instead of saying you have no real-time
 information, if a known weather API is available to you.
 
+For anything that could be a fact the user has told you before (their
+location, name, preferences, etc.), call search_memory FIRST, before
+reaching for an external API. What the user actually told you is more
+trustworthy than an approximation like IP-based geolocation -- only
+fall back to an external lookup when memory has nothing relevant.
+
 You can also save a fact to persistent memory when the user asks you
 to remember something (e.g. "remember my location is Hisar") -- use a
 short, stable key so it updates a prior fact instead of duplicating

@@ -6,6 +6,7 @@ class ApprovalPolicy:
         "read_file",
         "search_memory",
         "run_python_file",
+        "save_memory",
     }
 
     # Tools that modify state or have potentially
@@ -14,7 +15,6 @@ class ApprovalPolicy:
         "create_directory",
         "write_file",
         "edit_file",
-        "save_memory",
         "run_command",
         "call_api",
     }

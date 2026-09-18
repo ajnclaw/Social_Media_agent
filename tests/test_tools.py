@@ -1,7 +1,12 @@
 import pytest
 
 from agent.config import SANDBOX_DIR
-from agent.tools import is_allowed_api_url, safe_path
+from agent.tools import (
+    build_request_url,
+    is_allowed_api_url,
+    safe_path,
+    TOOL_PREVIEW_BUILDERS,
+)
 
 
 def test_allows_https_request_to_known_domain():
@@ -44,3 +49,35 @@ def test_safe_path_blocks_parent_directory_traversal():
 def test_safe_path_blocks_absolute_path_escape():
     with pytest.raises(PermissionError):
         safe_path("/etc/passwd")
+
+
+def test_build_request_url_returns_bare_url_when_no_params():
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    assert build_request_url(url) == url
+
+
+def test_build_request_url_appends_params_with_question_mark():
+    url = build_request_url(
+        "https://api.frankfurter.app/latest",
+        {"from": "USD", "to": "EUR"},
+    )
+
+    assert url == "https://api.frankfurter.app/latest?from=USD&to=EUR"
+
+
+def test_build_request_url_appends_params_with_ampersand_when_query_exists():
+    url = build_request_url(
+        "https://api.open-meteo.com/v1/forecast?latitude=51.5",
+        {"longitude": "-0.12"},
+    )
+
+    assert url == "https://api.open-meteo.com/v1/forecast?latitude=51.5&longitude=-0.12"
+
+
+def test_call_api_preview_shows_the_exact_url_that_will_be_sent():
+    preview = TOOL_PREVIEW_BUILDERS["call_api"](
+        {"url": "https://api.frankfurter.app/latest", "params": {"from": "USD", "to": "EUR"}}
+    )
+
+    assert "https://api.frankfurter.app/latest?from=USD&to=EUR" in preview

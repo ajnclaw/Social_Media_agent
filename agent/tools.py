@@ -69,6 +69,24 @@ def is_allowed_api_url(url):
     )
 
 
+def build_request_url(url, params=None):
+    """
+    Merge url and params into the exact URL that will actually be
+    requested. Shared by call_api (to build the real request) and the
+    approval preview (so what you're shown to approve is guaranteed
+    to match what actually gets sent, not a separately-maintained
+    copy of the same logic).
+    """
+    if not params:
+        return url
+
+    parsed = urllib.parse.urlparse(url)
+    query = urllib.parse.urlencode(params)
+    separator = "&" if parsed.query else "?"
+
+    return f"{url}{separator}{query}"
+
+
 def call_api(url, params=None):
 
     try:
@@ -83,11 +101,7 @@ def call_api(url, params=None):
                 ),
             )
 
-        if params:
-            parsed = urllib.parse.urlparse(url)
-            query = urllib.parse.urlencode(params)
-            separator = "&" if parsed.query else "?"
-            url = f"{url}{separator}{query}"
+        url = build_request_url(url, params)
 
         request = urllib.request.Request(
             url,
@@ -475,6 +489,25 @@ TOOL_FUNCTIONS = {
 }
 
 
+def _call_api_preview(arguments):
+    url = build_request_url(
+        arguments.get("url", ""),
+        arguments.get("params"),
+    )
+
+    return f"Full request URL (what will actually be sent):\n  {url}"
+
+
+# Optional per-tool preview shown in the approval prompt, computed
+# from the raw arguments before the tool runs. Only call_api has one
+# right now -- its raw arguments (url + optional params) don't show
+# the actual outgoing request, so this resolves them into the real
+# URL using the exact same logic call_api itself uses to build it.
+TOOL_PREVIEW_BUILDERS = {
+    "call_api": _call_api_preview,
+}
+
+
 class ToolManager:
 
     def __init__(self):
@@ -516,9 +549,19 @@ class ToolManager:
 
         if policy["requires_approval"]:
 
+            preview = None
+            preview_builder = TOOL_PREVIEW_BUILDERS.get(tool_name)
+
+            if preview_builder:
+                try:
+                    preview = preview_builder(arguments)
+                except Exception:
+                    preview = None
+
             approved = self.approval_manager.request_approval(
                 tool_name,
                 arguments,
+                preview=preview,
             )
 
             if not approved:
@@ -685,7 +728,11 @@ TOOL_SCHEMAS = [
                 "Search persistent agent memory for saved facts. "
                 "Returns the best-matching facts ranked by relevance, "
                 "or every saved fact if nothing closely matches the "
-                "query -- treat weakly-related results accordingly."
+                "query -- treat weakly-related results accordingly. "
+                "When you use a result in your answer, say it came "
+                "from saved memory (e.g. 'Based on what you told me "
+                "before...') rather than stating it as if you always "
+                "knew it."
             ),
             "parameters": {
                 "type": "object",
@@ -758,7 +805,10 @@ TOOL_SCHEMAS = [
                 "needs real-world information no local tool can provide "
                 "(e.g. current weather, exchange rates). Only the "
                 "pre-approved domains below are allowed -- any other URL "
-                "is rejected.\n\n" + _API_REGISTRY_DESCRIPTION
+                "is rejected. When you use the result in your answer, "
+                "mention which source it came from (e.g. 'According to "
+                "the weather API...') rather than stating it as fact "
+                "without attribution.\n\n" + _API_REGISTRY_DESCRIPTION
             ),
             "parameters": {
                 "type": "object",

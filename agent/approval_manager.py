@@ -7,6 +7,7 @@ class ApprovalManager:
         self,
         tool_name,
         arguments,
+        preview=None,
     ):
         print("\n" + "=" * 60)
         print("APPROVAL REQUIRED")
@@ -17,6 +18,10 @@ class ApprovalManager:
 
         for key, value in arguments.items():
             print(f"  {key}: {value}")
+
+        if preview:
+            print()
+            print(preview)
 
         print("=" * 60)
 

@@ -1,4 +1,9 @@
 from agent import Agent
+from agent.compactor import compact_history
+
+
+KEEP_RECENT_TURNS = 5
+COMPACT_TRIGGER_TURNS = 10
 
 
 def summarize_tasks(state):
@@ -60,6 +65,16 @@ def main():
             "reply": state.reply,
             "tasks": summarize_tasks(state),
         })
+
+        turns_before = len(history)
+        history = compact_history(
+            history,
+            keep_recent=KEEP_RECENT_TURNS,
+            trigger_at=COMPACT_TRIGGER_TURNS,
+        )
+
+        if len(history) < turns_before:
+            print("[Compacted older conversation history into a summary]\n")
 
 
 if __name__ == "__main__":

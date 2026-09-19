@@ -147,16 +147,25 @@ MAX_HISTORY_TURNS = 5
 
 def format_history(history, max_turns=MAX_HISTORY_TURNS):
     """
-    Render a bounded window of prior chat turns as plain text, capped
-    to the most recent turns so a long chat session doesn't grow the
-    prompt unbounded. Shared between the planner and the responder.
+    Render prior chat turns as plain text. A compacted summary entry
+    (see compactor.py) always survives regardless of max_turns -- only
+    the regular, un-compacted turns get capped to the most recent
+    ones, so a long session doesn't grow the prompt unbounded while
+    still keeping the condensed gist of everything before that.
+    Shared between the planner and the responder.
     """
     if not history:
         return ""
 
+    summary_entries = [turn for turn in history if "summary" in turn]
+    regular_entries = [turn for turn in history if "summary" not in turn]
+
     lines = ["Conversation so far:"]
 
-    for turn in history[-max_turns:]:
+    for turn in summary_entries:
+        lines.append(f"Summary of earlier conversation: {turn['summary']}")
+
+    for turn in regular_entries[-max_turns:]:
         lines.append(f"- User asked: {turn['user_input']}")
         lines.append(f"  Result: {turn['status']}")
 

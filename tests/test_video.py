@@ -1,7 +1,7 @@
 import pytest
 
 import agent.video as video_module
-from agent.video import get_audio_duration, split_script_into_slides
+from agent.video import build_image_prompts, get_audio_duration, split_script_into_slides
 
 
 def test_split_script_into_slides_splits_on_sentences():
@@ -56,6 +56,28 @@ def test_get_audio_duration_raises_on_ffprobe_failure(monkeypatch):
 
     with pytest.raises(RuntimeError):
         get_audio_duration("narration.mp3")
+
+
+def test_build_image_prompts_leaves_first_slide_unchanged():
+    prompts = build_image_prompts(["An octopus has three hearts", "which is odd"])
+
+    assert prompts[0] == "An octopus has three hearts"
+
+
+def test_build_image_prompts_anchors_later_slides_with_the_subject():
+    prompts = build_image_prompts([
+        "An octopus has three hearts",
+        "which is part of why they prefer crawling over swimming",
+    ])
+
+    assert prompts[1] == (
+        "An octopus has three hearts, "
+        "which is part of why they prefer crawling over swimming"
+    )
+
+
+def test_build_image_prompts_handles_empty_list():
+    assert build_image_prompts([]) == []
 
 
 def test_get_audio_duration_parses_ffprobe_output(monkeypatch):

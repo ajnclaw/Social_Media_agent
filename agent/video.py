@@ -156,8 +156,8 @@ def generate_background(prompt):
     return image.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.LANCZOS)
 
 
-def render_slide(text, output_path, size=(VIDEO_WIDTH, VIDEO_HEIGHT)):
-    image = generate_background(text).convert("RGBA")
+def render_slide(text, output_path, image_prompt=None, size=(VIDEO_WIDTH, VIDEO_HEIGHT)):
+    image = generate_background(image_prompt or text).convert("RGBA")
 
     font = _load_font(72)
     lines = textwrap.wrap(text, width=WRAP_WIDTH) or [text]
@@ -265,6 +265,25 @@ def assemble_video(slide_paths, durations, audio_path, output_path):
         raise RuntimeError(f"ffmpeg failed: {result.stderr[-2000:]}")
 
 
+def build_image_prompts(slides_text):
+    """
+    Anchor every slide after the first with the first slide's text, so
+    a later fragment that only uses a pronoun (e.g. "which is part of
+    why they prefer crawling over swimming") doesn't lose its subject
+    when sent to the image model as a standalone, context-free prompt
+    -- each generate_background() call has no memory of other slides.
+    """
+    if not slides_text:
+        return []
+
+    subject = slides_text[0]
+
+    return [
+        text if index == 0 else f"{subject}, {text}"
+        for index, text in enumerate(slides_text)
+    ]
+
+
 def create_video(script, output_dir):
     """
     Render a narration script into output_dir/video.mp4. output_dir
@@ -279,13 +298,14 @@ def create_video(script, output_dir):
     total_duration = get_audio_duration(audio_path)
 
     slides_text = split_script_into_slides(script)
+    image_prompts = build_image_prompts(slides_text)
     per_slide_seconds = max(total_duration / len(slides_text), MIN_SLIDE_SECONDS)
 
     slide_paths = []
 
     for index, text in enumerate(slides_text):
         slide_path = output_dir / f"slide_{index:03d}.png"
-        render_slide(text, slide_path)
+        render_slide(text, slide_path, image_prompt=image_prompts[index])
         slide_paths.append(slide_path)
 
     durations = [per_slide_seconds] * len(slide_paths)

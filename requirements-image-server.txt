@@ -1,6 +1,13 @@
 # Dependencies for the machine running agent/image_server.py -- the
 # main agent (requirements.txt) no longer needs diffusers/torch for
 # image generation, since it calls this server over HTTP instead.
+#
+# On Windows, `pip install torch` from this file pulls a CPU-only
+# build by default -- generation will fail with "Torch not compiled
+# with CUDA enabled". Reinstall it from PyTorch's CUDA index instead,
+# matching the version `nvidia-smi` reports, e.g.:
+#   pip uninstall torch -y
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
 diffusers>=0.40.0
 torch
 pillow>=12.3.0

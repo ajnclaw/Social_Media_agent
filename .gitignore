@@ -18,3 +18,10 @@ memory.txt
 
 # Local logs (once we add structured logging)
 logs/
+
+# Local secrets -- never commit
+.env
+
+# Personal voice reference clip -- not needed by the image server this
+# repo also gets cloned for, and shouldn't sit in a public repo
+assets/

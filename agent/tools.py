@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .config import MEMORY_FILE, PROJECT_ROOT, SANDBOX_DIR
 from .memory import search_memory, save_memory
+from .video import create_video
 from .approval import ApprovalPolicy
 from .approval_manager import ApprovalManager
 
@@ -475,6 +476,26 @@ def save_memory_tool(key, value):
             error=str(e)
         )
 
+def create_video_tool(script, name):
+
+    try:
+
+        output_dir = safe_path(Path("videos") / name)
+
+        video_path = create_video(script, output_dir)
+
+        return tool_result(
+            success=True,
+            output=f"Video created: {video_path.relative_to(SANDBOX_DIR)}"
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e)
+        )
+
 TOOL_FUNCTIONS = {
 
     "list_files": list_files,
@@ -496,6 +517,8 @@ TOOL_FUNCTIONS = {
     "run_command": run_command,
 
     "call_api": call_api,
+
+    "create_video": create_video_tool,
 }
 
 
@@ -833,6 +856,40 @@ TOOL_SCHEMAS = [
                     },
                 },
                 "required": ["url"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_video",
+            "description": (
+                "Render a finished narration script into a short "
+                "vertical video (1080x1920) with text-slide captions "
+                "synced to spoken narration audio. This tool does not "
+                "write the script -- compose the full narration text "
+                "yourself first, then pass it in complete. The result "
+                "is a video.mp4 saved under sandbox/videos/<name>/."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "script": {
+                        "type": "string",
+                        "description": (
+                            "Complete narration script to speak and "
+                            "caption, written as plain sentences."
+                        ),
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": (
+                            "Short filesystem-safe name for this "
+                            "video, used as its output folder."
+                        ),
+                    },
+                },
+                "required": ["script", "name"],
             },
         },
     },

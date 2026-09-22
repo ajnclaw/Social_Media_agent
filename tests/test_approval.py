@@ -23,7 +23,7 @@ def test_call_api_still_requires_approval():
 def test_file_and_shell_mutation_tools_still_require_approval():
     policy = ApprovalPolicy()
 
-    for tool_name in ("write_file", "edit_file", "create_directory", "run_command"):
+    for tool_name in ("write_file", "edit_file", "create_directory", "run_command", "create_video"):
         result = policy.check(tool_name)
 
         assert result["requires_approval"] is True

@@ -17,6 +17,7 @@ class ApprovalPolicy:
         "edit_file",
         "run_command",
         "call_api",
+        "create_video",
     }
 
     def requires_approval(self, tool_name):

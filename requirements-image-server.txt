@@ -1,0 +1,6 @@
+# Dependencies for the machine running agent/image_server.py -- the
+# main agent (requirements.txt) no longer needs diffusers/torch for
+# image generation, since it calls this server over HTTP instead.
+diffusers>=0.40.0
+torch
+pillow>=12.3.0

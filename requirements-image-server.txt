@@ -12,3 +12,5 @@ diffusers>=0.40.0
 torch
 pillow>=12.3.0
 transformers
+peft
+accelerate

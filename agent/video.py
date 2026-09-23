@@ -6,6 +6,7 @@
 # No LLM calls happen here -- the caller supplies the finished script
 # text, same as write_file takes finished content.
 
+import base64
 import io
 import json
 import subprocess
@@ -16,7 +17,8 @@ from pathlib import Path
 import torchaudio
 from PIL import Image, ImageDraw, ImageFont
 
-from .config import IMAGE_SERVER_URL, VOICE_REFERENCE_PATH
+from .config import QWEN_SERVER_URL, VOICE_REFERENCE_PATH
+from .reference_image import fetch_reference_image_bytes
 
 
 VIDEO_WIDTH = 1080
@@ -132,25 +134,45 @@ def generate_background(prompt):
     -- no LLM call, consistent with this module's rule that the caller
     supplies finished content, not a request for us to interpret.
 
-    Generation itself runs on a separate machine (agent/image_server.py)
-    rather than loading the model in this process, so it doesn't compete
-    with Chatterbox for GPU memory here -- see IMAGE_SERVER_URL.
+    Default path: look up a real reference photo on Wikimedia Commons
+    for the subject, then use Qwen-Image-Edit (via QWEN_SERVER_URL) to
+    restyle it -- grounds the result in a real photo's actual structure
+    instead of imagining the subject from scratch, far more reliable
+    for anatomy/accuracy. Falls back to pure Qwen-Image text2img if no
+    reference photo is found. Much slower (~13min/image) than the old
+    SD1.5+LCM-LoRA path (agent/image_server.py, IMAGE_SERVER_URL), which
+    still exists as a manual fallback but isn't used by default now.
     """
-    if not IMAGE_SERVER_URL:
+    if not QWEN_SERVER_URL:
         raise RuntimeError(
-            "IMAGE_SERVER_URL is not set. Run agent/image_server.py on "
-            "the machine doing image generation, then set "
-            "IMAGE_SERVER_URL=http://<that machine>:8420 in .env."
+            "QWEN_SERVER_URL is not set. Run qwen_server.py (from the "
+            "Qwen_laptop repo) on the machine doing image generation, "
+            "then set QWEN_SERVER_URL=http://<that machine>:8421 in .env."
         )
 
+    try:
+        reference_bytes = fetch_reference_image_bytes(prompt)
+    except Exception:
+        reference_bytes = None  # A Commons lookup failure shouldn't block generation
+
+    if reference_bytes:
+        payload = {
+            "prompt": prompt,
+            "image_b64": base64.b64encode(reference_bytes).decode("ascii"),
+        }
+        endpoint = "/edit"
+    else:
+        payload = {"prompt": prompt}
+        endpoint = "/generate"
+
     request = urllib.request.Request(
-        f"{IMAGE_SERVER_URL}/generate",
-        data=json.dumps({"prompt": prompt}).encode("utf-8"),
+        f"{QWEN_SERVER_URL}{endpoint}",
+        data=json.dumps(payload).encode("utf-8"),
         headers={"Content-Type": "application/json"},
         method="POST",
     )
 
-    with urllib.request.urlopen(request, timeout=120) as response:
+    with urllib.request.urlopen(request, timeout=1200) as response:
         image = Image.open(io.BytesIO(response.read())).convert("RGB")
 
     return image.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.LANCZOS)

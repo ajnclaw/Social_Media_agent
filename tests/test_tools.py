@@ -4,6 +4,7 @@ from agent.config import SANDBOX_DIR
 from agent.tools import (
     build_request_url,
     is_allowed_api_url,
+    post_to_youtube_tool,
     read_file,
     safe_path,
     TOOL_PREVIEW_BUILDERS,
@@ -96,3 +97,32 @@ def test_read_file_redirects_even_with_a_path_prefix():
 
     assert result["success"] is False
     assert "search_memory" in result["error"]
+
+
+def test_post_to_youtube_fails_clearly_when_video_missing():
+    result = post_to_youtube_tool(
+        "a_video_that_was_never_created",
+        title="Title",
+        description="Description",
+    )
+
+    assert result["success"] is False
+    assert "create_video" in result["error"]
+
+
+def test_post_to_youtube_preview_defaults_to_private():
+    preview = TOOL_PREVIEW_BUILDERS["post_to_youtube"](
+        {"video_name": "octopus_facts", "title": "Octopus facts"}
+    )
+
+    assert "PRIVATE" in preview
+    assert "octopus_facts" in preview
+    assert "Octopus facts" in preview
+
+
+def test_post_to_youtube_preview_shows_explicit_public_status():
+    preview = TOOL_PREVIEW_BUILDERS["post_to_youtube"](
+        {"video_name": "octopus_facts", "title": "Octopus facts", "privacy_status": "public"}
+    )
+
+    assert "PUBLIC" in preview

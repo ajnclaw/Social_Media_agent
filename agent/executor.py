@@ -14,6 +14,8 @@ REQUIRED_TOOL_BY_KEYWORD = {
     "run": "run_python_file",
     "search": "search_memory",
     "video": "create_video",
+    "upload": "post_to_youtube",
+    "publish": "post_to_youtube",
     # A task objective mentioning "memory" (e.g. "Read memory.json",
     # a Planner slip-up memory.json isn't actually a readable file --
     # search_memory is the real mechanism) should still accept a

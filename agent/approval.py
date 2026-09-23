@@ -18,6 +18,7 @@ class ApprovalPolicy:
         "run_command",
         "call_api",
         "create_video",
+        "post_to_youtube",
     }
 
     def requires_approval(self, tool_name):

@@ -10,6 +10,7 @@ from pathlib import Path
 from .config import MEMORY_FILE, PROJECT_ROOT, SANDBOX_DIR
 from .memory import search_memory, save_memory
 from .video import create_video
+from .youtube import upload_video
 from .approval import ApprovalPolicy
 from .approval_manager import ApprovalManager
 
@@ -496,6 +497,44 @@ def create_video_tool(script, name):
             error=str(e)
         )
 
+def post_to_youtube_tool(video_name, title, description, tags=None, privacy_status="private"):
+
+    try:
+
+        video_path = safe_path(Path("videos") / video_name / "video.mp4")
+
+        if not video_path.exists():
+            return tool_result(
+                success=False,
+                error=(
+                    f"No video found for '{video_name}'. "
+                    f"Run create_video first to produce it."
+                ),
+            )
+
+        response = upload_video(
+            video_path,
+            title,
+            description,
+            tags=tags,
+            privacy_status=privacy_status,
+        )
+
+        video_id = response.get("id")
+        url = f"https://youtu.be/{video_id}" if video_id else None
+
+        return tool_result(
+            success=True,
+            output=f"Uploaded to YouTube ({privacy_status}): {url}"
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e)
+        )
+
 TOOL_FUNCTIONS = {
 
     "list_files": list_files,
@@ -519,6 +558,8 @@ TOOL_FUNCTIONS = {
     "call_api": call_api,
 
     "create_video": create_video_tool,
+
+    "post_to_youtube": post_to_youtube_tool,
 }
 
 
@@ -531,13 +572,24 @@ def _call_api_preview(arguments):
     return f"Full request URL (what will actually be sent):\n  {url}"
 
 
+def _post_to_youtube_preview(arguments):
+    privacy_status = arguments.get("privacy_status", "private")
+
+    return (
+        f"Will upload sandbox/videos/{arguments.get('video_name')}/video.mp4 "
+        f"to YouTube as: {privacy_status.upper()}\n"
+        f"  Title: {arguments.get('title')}"
+    )
+
+
 # Optional per-tool preview shown in the approval prompt, computed
-# from the raw arguments before the tool runs. Only call_api has one
-# right now -- its raw arguments (url + optional params) don't show
-# the actual outgoing request, so this resolves them into the real
-# URL using the exact same logic call_api itself uses to build it.
+# from the raw arguments before the tool runs -- call_api's raw
+# arguments (url + optional params) don't show the actual outgoing
+# request, and post_to_youtube's privacy_status/title are worth
+# surfacing clearly before a real publish happens.
 TOOL_PREVIEW_BUILDERS = {
     "call_api": _call_api_preview,
+    "post_to_youtube": _post_to_youtube_preview,
 }
 
 
@@ -890,6 +942,55 @@ TOOL_SCHEMAS = [
                     },
                 },
                 "required": ["script", "name"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "post_to_youtube",
+            "description": (
+                "Upload a video previously made with create_video to "
+                "YouTube. Defaults to uploading as private -- only pass "
+                "privacy_status='public' or 'unlisted' when the user has "
+                "explicitly asked for the video to be made public, never "
+                "on your own judgment. Requires a one-time OAuth login "
+                "the first time this runs (opens a browser)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "video_name": {
+                        "type": "string",
+                        "description": (
+                            "The name create_video was given -- used to "
+                            "find sandbox/videos/<video_name>/video.mp4."
+                        ),
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "YouTube video title.",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "YouTube video description.",
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional list of video tags.",
+                    },
+                    "privacy_status": {
+                        "type": "string",
+                        "enum": ["private", "unlisted", "public"],
+                        "description": (
+                            "Defaults to 'private' if omitted. Only set "
+                            "to 'public' or 'unlisted' on the user's "
+                            "explicit instruction."
+                        ),
+                    },
+                },
+                "required": ["video_name", "title", "description"],
             },
         },
     },

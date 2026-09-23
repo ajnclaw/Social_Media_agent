@@ -18,6 +18,11 @@ VOICE_REFERENCE_PATH = PROJECT_ROOT / "assets" / "voice_reference.mp3"
 # that machine's address, e.g. "http://192.168.1.42:8420".
 IMAGE_SERVER_URL = os.environ.get("IMAGE_SERVER_URL", "")
 
+# One-time OAuth setup only the account owner can do (see agent/youtube.py) --
+# download the client secret from Google Cloud Console and place it here.
+YOUTUBE_CLIENT_SECRET_PATH = PROJECT_ROOT / "assets" / "youtube_client_secret.json"
+YOUTUBE_TOKEN_PATH = PROJECT_ROOT / "assets" / "youtube_token.json"
+
 DEFAULT_AGENT_NAME = "main"
 
 DEFAULT_MODEL = "qwen3:4b"

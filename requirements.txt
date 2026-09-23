@@ -4,3 +4,6 @@ chatterbox-tts>=0.1.7
 setuptools<81
 torch
 torchaudio
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

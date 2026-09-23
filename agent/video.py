@@ -172,7 +172,11 @@ def generate_background(prompt):
         method="POST",
     )
 
-    with urllib.request.urlopen(request, timeout=1200) as response:
+    # Generous timeout: Qwen-Image/Qwen-Image-Edit are ~20B-parameter
+    # models -- a first-time call includes a one-time multi-GB weight
+    # download and layer-streaming load on top of generation itself,
+    # which alone can take close to the old 1200s ceiling.
+    with urllib.request.urlopen(request, timeout=5400) as response:
         image = Image.open(io.BytesIO(response.read())).convert("RGB")
 
     return image.resize((VIDEO_WIDTH, VIDEO_HEIGHT), Image.LANCZOS)

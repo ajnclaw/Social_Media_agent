@@ -101,6 +101,31 @@ SMALLER LOOSE ENDS FROM TONIGHT
   just the last one. Confirmed fixed: a fresh two-key delete now replies
   "Done -- Deleted: disliked_jokes; Deleted: favorite_jokes" instead of
   only mentioning the second key.
+- [DONE] Fixed AGENT_AUTO_APPROVE silently rubber-stamping expensive/
+  irreversible tool calls with zero human check. Real incident: a phone
+  message about how to talk to a friend/husband got planned into the
+  full "make a video" pipeline (search_memory -> list_files ->
+  create_directory -> write_file -> create_video) and silently started
+  a multi-minute local GPU render, no confirmation asked, because
+  agent_server.py sets AGENT_AUTO_APPROVE=1 and the planner had no
+  concept of "ask before this one." Two-layer fix:
+  - approval_manager.py: create_video and run_command added to
+    NEVER_AUTO_APPROVE (alongside post_to_youtube) -- these three now
+    always deny by default in the headless server, regardless of
+    AGENT_AUTO_APPROVE. Verified this denies instantly, not a hang.
+  - planner.py (Rule 21) + responder.py: create_video/run_command/
+    post_to_youtube can only be planned when the user has given a
+    clear, specific go-ahead (this message or direct reply to the
+    assistant's own confirmation question) -- a vague/emotional/
+    exploratory message about a topic is never enough on its own.
+    Responder now describes cost (time/files/publishing) and asks
+    first instead of assuming. Verified: the same style of message
+    ("I don't know how to express my feelings about my friend's
+    behavior") now gets {"tasks": []} and a plain conversational
+    reply, no tools called at all.
+  Note: write_file/create_directory/delete_memory/save_memory/
+  call_api are unaffected -- still auto-approved for single-owner
+  personal use, since they're cheap and reversible.
 - Planner reliability: qwen2.5:1.5b and qwen3:4b both showed real
   planning/schema issues (invalid task types, hallucinated dates,
   false-positive success). Currently on openai/gpt-4o-mini via

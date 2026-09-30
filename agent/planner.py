@@ -111,6 +111,24 @@ Rules:
     task when it is genuinely one dependency-linked step inside a
     larger multi-step plan the user explicitly asked for.
 
+21. create_video, run_command, and post_to_youtube are slow,
+    resource-heavy, and/or externally-visible -- create_video takes
+    several minutes of local compute and writes real files, run_command
+    executes an arbitrary shell command, post_to_youtube publishes
+    publicly. Never create a task using any of these three unless the
+    conversation makes it unmistakable the user wants it actually done
+    now, not just discussed or brainstormed. A message that merely
+    mentions, imagines, or is emotionally exploring a topic ("I wish
+    someone would explain X", "I don't know how to talk to my husband
+    about his behavior") is a request for a conversational answer, NOT
+    an instruction to produce a video, run a command, or publish
+    anything -- return {"tasks": []} for these every time, even if the
+    topic resembles a video you've made before. Only plan one of these
+    three tools when the user has given a clear, specific go-ahead --
+    either directly in this message ("make a 30 second video about X"),
+    or in direct response to the assistant's own confirmation question
+    from a prior turn shown in the conversation history above.
+
 Example:
 
 {

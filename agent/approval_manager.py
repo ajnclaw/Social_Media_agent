@@ -1,13 +1,19 @@
 import os
 
 
-# Tools that publish/post content externally are never auto-approved, even
-# with AGENT_AUTO_APPROVE=1 -- that flag exists for headless/server contexts
-# (no terminal to answer a y/N prompt), and a real external publish action
-# shouldn't lose its human-in-the-loop gate just because nothing can render
-# the prompt. Server callers should treat a denial here as "needs the user's
-# explicit go-ahead through some other channel", not retry it.
+# Tools that are slow/resource-heavy, run arbitrary commands, or publish
+# content externally are never auto-approved, even with AGENT_AUTO_APPROVE=1
+# -- that flag exists for headless/server contexts (no terminal to answer a
+# y/N prompt), and these three shouldn't lose their human-in-the-loop gate
+# just because nothing can render the prompt:
+#   - create_video: several minutes of local GPU time, writes real files
+#   - run_command: executes an arbitrary shell command
+#   - post_to_youtube: publishes publicly, irreversible
+# Server callers should treat a denial here as "needs the user's explicit
+# go-ahead through some other channel" (i.e. ask in chat), not retry it.
 NEVER_AUTO_APPROVE = {
+    "create_video",
+    "run_command",
     "post_to_youtube",
 }
 
@@ -45,8 +51,9 @@ class ApprovalManager:
 
         if os.environ.get("AGENT_AUTO_APPROVE") == "1":
             print(
-                f"NOT auto-approving '{tool_name}' -- publishes external "
-                f"content, always needs an explicit answer."
+                f"NOT auto-approving '{tool_name}' -- slow, resource-heavy, "
+                f"runs a real command, or publishes externally; always "
+                f"needs an explicit answer."
             )
 
         try:

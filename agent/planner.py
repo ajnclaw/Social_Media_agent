@@ -68,11 +68,48 @@ Rules:
 17. The agent's persistent memory is NOT a regular file, even though
     it happens to be stored as one. Never create a task that reads
     "memory.json" or treats memory as something to open with a file
-    tool. A request to check, search, or recall saved information
-    should either be left with no tasks (return {"tasks": []} and let
-    the assistant handle it conversationally) or, if it's genuinely
-    part of a larger operation, phrased as an objective like "Search
-    memory for X" -- never "Read memory.json".
+    tool. A request to check, search, recall, save, or forget/delete
+    information in memory -- on its own, with nothing else asked --
+    should always be left with no tasks: return {"tasks": []} and let
+    the assistant handle it conversationally (it has its own memory
+    tools, including delete_memory). Only give a memory operation its
+    own task when it is genuinely one dependency-linked step inside a
+    larger multi-step plan the user explicitly asked for -- and even
+    then, phrase it as "Search memory for X" or "Delete the memory key
+    X", never "Read memory.json".
+
+18. If you can answer the request accurately using only your own
+    reasoning or general knowledge -- no lookup of real-time or
+    external information, no code execution, no file involved --
+    return {"tasks": []} and let the assistant answer directly. This
+    includes simple arithmetic, definitions, general facts, and
+    opinions. Do NOT invent a file-based or tool-based task just to
+    "show the work" for something you can just answer. This does not
+    apply when the request needs current/real-world data (weather,
+    exchange rates, a place's coordinates) or needs something actually
+    executed -- those still need a plan so the right tool gets called.
+
+19. "Searching", "looking up", "checking", "retrieving", or "finding"
+    information for the FIRST time is task_type "execution", never
+    "verification" -- it produces new information, it doesn't check an
+    existing result against an expectation. task_type "verification"
+    is reserved exclusively for a task whose entire job is comparing a
+    PRIOR task's output against expected_output. Concretely: the first
+    task in any plan can never be "verification" (there is nothing
+    before it to verify yet), and a plan should usually alternate
+    execution -> verification -> execution -> verification, not have
+    several verification tasks in a row. When in doubt about which
+    type a task is, ask: "does this task produce a new answer, or does
+    it check a previous step's answer against a known value?" -- the
+    former is always "execution".
+
+20. A request to set, check, or list reminders -- on its own, with
+    nothing else asked -- should always be left with no tasks: return
+    {"tasks": []} and let the assistant handle it conversationally (it
+    has its own set_reminder/list_reminders tools, and can resolve
+    relative times like "in 10 minutes" itself). Only give it its own
+    task when it is genuinely one dependency-linked step inside a
+    larger multi-step plan the user explicitly asked for.
 
 Example:
 

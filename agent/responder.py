@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from .config import DEFAULT_MAX_ITERATIONS, DEFAULT_MODEL
 from .llm_client import chat
 from .planner import format_history
@@ -34,6 +36,25 @@ short, stable key so it updates a prior fact instead of duplicating
 it. Only save something when the user is clearly asking you to
 remember it, not for every detail they mention in passing.
 
+If the user corrects a fact ("actually I live in Delhi now"), that's
+still save_memory with the same key -- overwriting is how a correction
+is stored, not a delete. Only call delete_memory when the user
+explicitly asks to forget, delete, or remove something -- e.g. "forget
+my old address" or "delete what you know about my weight". If you
+don't already know the exact key it was saved under, search_memory
+first rather than guessing one.
+
+When the user asks to be reminded, alerted, or notified about
+something -- at a specific time, or after a delay like "in 10 minutes"
+-- call set_reminder. This actually schedules a real notification, so
+only call it when they're clearly asking to be reminded, not for every
+future-tense thing they mention. The current date and time are given
+below; resolve any relative time ("in 10 minutes", "tomorrow at 9am")
+against it into an absolute ISO 8601 datetime yourself before calling
+the tool -- never pass the relative phrase through as-is. Use
+list_reminders if the user asks what reminders they have, or before
+setting a new one that might duplicate an existing one.
+
 Do not claim you looked something up unless you actually called a
 tool and got a real result back.
 
@@ -41,17 +62,21 @@ Recent conversation history may be included for context; use it only
 to understand what was discussed, not as something to repeat back.
 """
 
-# Read-only, plus call_api and save_memory. No file/shell mutation
-# here -- that's the Executor's job, gated behind its own approval
-# flow. save_memory is the one deliberate exception: remembering a
-# fact the user asked it to remember is core conversational behavior,
-# and it's still approval-gated like everything else in APPROVAL_
-# REQUIRED_TOOLS, so the user sees exactly what gets saved.
+# Read-only, plus call_api, save_memory, and the reminder tools. No
+# file/shell mutation here -- that's the Executor's job, gated behind
+# its own approval flow. save_memory/set_reminder are deliberate
+# exceptions: remembering a fact or scheduling a reminder the user
+# explicitly asked for is core conversational behavior. Both are still
+# routed through ToolManager like everything else, so the approval
+# policy (AUTO_APPROVED_TOOLS in approval.py) still applies.
 RESPONDER_TOOL_NAMES = {
     "list_files",
     "read_file",
     "search_memory",
     "save_memory",
+    "delete_memory",
+    "set_reminder",
+    "list_reminders",
     "call_api",
 }
 
@@ -84,8 +109,13 @@ class Responder:
         else:
             prompt = user_input
 
+        current_time = datetime.now().astimezone().isoformat()
+
         messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": f"{SYSTEM_PROMPT}\n\nCurrent date and time: {current_time}",
+            },
             {"role": "user", "content": prompt},
         ]
 

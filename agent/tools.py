@@ -8,7 +8,8 @@ import urllib.request
 from pathlib import Path
 
 from .config import MEMORY_FILE, PROJECT_ROOT, SANDBOX_DIR
-from .memory import search_memory, save_memory
+from .vector_memory import search_facts, save_fact, delete_fact
+from .reminders import add_reminder, list_reminders
 from .video import create_video
 from .youtube import upload_video
 from .approval import ApprovalPolicy
@@ -445,7 +446,7 @@ def search_memory_tool(query):
 
     try:
 
-        result = search_memory(query)
+        result = search_facts(query)
 
         return tool_result(
             success=True,
@@ -463,11 +464,65 @@ def save_memory_tool(key, value):
 
     try:
 
-        result = save_memory(key, value)
+        result = save_fact(key, value)
 
         return tool_result(
             success=True,
             output=result
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e)
+        )
+
+def delete_memory_tool(key):
+
+    try:
+
+        result = delete_fact(key)
+
+        return tool_result(
+            success=True,
+            output=result
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e)
+        )
+
+def set_reminder_tool(message, when):
+
+    try:
+
+        reminder = add_reminder(message, when)
+
+        return tool_result(
+            success=True,
+            output=reminder
+        )
+
+    except Exception as e:
+
+        return tool_result(
+            success=False,
+            error=str(e)
+        )
+
+def list_reminders_tool():
+
+    try:
+
+        reminders = list_reminders()
+
+        return tool_result(
+            success=True,
+            output=reminders
         )
 
     except Exception as e:
@@ -552,6 +607,12 @@ TOOL_FUNCTIONS = {
     "search_memory": search_memory_tool,
 
     "save_memory": save_memory_tool,
+
+    "delete_memory": delete_memory_tool,
+
+    "set_reminder": set_reminder_tool,
+
+    "list_reminders": list_reminders_tool,
 
     "run_command": run_command,
 
@@ -861,6 +922,83 @@ TOOL_SCHEMAS = [
                     },
                 },
                 "required": ["key", "value"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_memory",
+            "description": (
+                "Permanently forget a saved fact by its key. Use this "
+                "only when the user explicitly asks to forget, delete, "
+                "or remove something previously remembered -- not when "
+                "they're just correcting a value (use save_memory with "
+                "the same key to overwrite instead, which is what "
+                "correcting a fact actually means). If unsure which key "
+                "a fact was saved under, call search_memory first rather "
+                "than guessing."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "description": "The exact key the fact was saved under, e.g. 'location'.",
+                    },
+                },
+                "required": ["key"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "set_reminder",
+            "description": (
+                "Save a reminder that will actually notify the user at "
+                "the right time (the phone schedules a real notification "
+                "for it -- this is not just a note). Use this whenever "
+                "the user asks to be reminded, alerted, or notified about "
+                "something at a specific time or after a delay."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "What to remind the user about.",
+                    },
+                    "when": {
+                        "type": "string",
+                        "description": (
+                            "Absolute ISO 8601 datetime (e.g. "
+                            "'2026-09-29T15:30:00+05:30'), computed from "
+                            "the current date/time given in context plus "
+                            "the user's requested time or delay (e.g. "
+                            "'in 10 minutes', 'tomorrow at 9am'). Never "
+                            "pass a relative phrase here -- resolve it to "
+                            "an absolute datetime first."
+                        ),
+                    },
+                },
+                "required": ["message", "when"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_reminders",
+            "description": (
+                "List the user's pending (not yet delivered) reminders. "
+                "Use this when the user asks what reminders they have, "
+                "or to check before setting a new one that might duplicate "
+                "an existing one."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
             },
         },
     },

@@ -17,11 +17,18 @@ REQUIRED_TOOL_BY_KEYWORD = {
     "upload": "post_to_youtube",
     "publish": "post_to_youtube",
     # A task objective mentioning "memory" (e.g. "Read memory.json",
-    # a Planner slip-up memory.json isn't actually a readable file --
-    # search_memory is the real mechanism) should still accept a
-    # successful search_memory call as valid evidence, on top of
-    # whatever the objective's other verb implies.
-    "memory": "search_memory",
+    # a Planner slip-up -- memory.json isn't actually a readable file,
+    # search/save/delete_memory are the real mechanisms) should accept
+    # any successful memory tool call as valid evidence, on top of
+    # whatever the objective's other verb implies. This has to be all
+    # three: an objective like "Save the nickname as Rocket in memory"
+    # matches BOTH "save" (below, -> write_file) and "memory" -- if
+    # "memory" only granted search_memory, the real save_memory success
+    # would still be rejected because it isn't in the expected set.
+    "memory": ("search_memory", "save_memory", "delete_memory"),
+    "remind": "set_reminder",
+    "forget": "delete_memory",
+    "delete": "delete_memory",
 }
 
 
@@ -32,14 +39,24 @@ def expected_tools_for(objective):
     successful tool call (e.g. a diagnostic list_files call after a
     failed run_python_file) can't be mistaken for evidence that the
     task's actual operation succeeded.
+
+    A keyword may map to more than one acceptable tool (see "memory"
+    above) -- values are either a single tool name or a tuple of them.
     """
     objective = objective.lower()
 
-    return {
-        tool_name
-        for keyword, tool_name in REQUIRED_TOOL_BY_KEYWORD.items()
-        if keyword in objective
-    }
+    tools = set()
+
+    for keyword, tool_names in REQUIRED_TOOL_BY_KEYWORD.items():
+        if keyword not in objective:
+            continue
+
+        if isinstance(tool_names, str):
+            tools.add(tool_names)
+        else:
+            tools.update(tool_names)
+
+    return tools
 
 
 SYSTEM_PROMPT = """
@@ -160,8 +177,19 @@ class Executor:
 
 
 
-                if result.get("success") and (
-                    not expected_tools or tool_name in expected_tools
+                # call_api's raw output is a JSON blob meant to be read by
+                # the model, not the user -- it's never the right thing to
+                # report as a task's final result. The model's own next
+                # turn (summarizing that JSON in plain language, e.g. "The
+                # current weather in Hisar is...") is what belongs here
+                # instead, so it's deliberately excluded and falls through
+                # to `content` below. Every other tool's raw output (a
+                # write_file confirmation, a search_memory fact list, ...)
+                # is already human-readable and stays as-is.
+                if (
+                    result.get("success")
+                    and tool_name != "call_api"
+                    and (not expected_tools or tool_name in expected_tools)
                 ):
                     last_tool_output = result.get("output")
 
@@ -223,6 +251,7 @@ class Executor:
             "delete",
             "save",
             "search",
+            "remind",
         ]
 
         objective = task.objective.lower()

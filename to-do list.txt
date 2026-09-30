@@ -1,0 +1,109 @@
+JARVIS / AI-AGENT -- TODO
+==========================
+
+LOCATION-BASED REMINDERS
+-------------------------
+Idea: "remind me to buy milk when I reach the store" -- geofence-triggered
+reminders, not just time-based ones.
+
+What it needs:
+- Phone: expo-location + expo-task-manager (new native modules -> rebuild)
+- Background task that watches for geofence-enter events (fires even with
+  the app closed/killed -- that's the whole point)
+- Server: extend reminders.db with trigger_type (time/location) +
+  latitude/longitude/radius_m columns, new set_location_reminder tool
+- Resolving a place name to coordinates:
+    - A city/town -> geocoding-api.open-meteo.com (already allowlisted, works)
+    - A specific business ("the grocery store") -> no API for this yet.
+      Either the user gives an address, or saves the place once via memory
+      ("remember my grocery store is at <address>") and we look it up by
+      name later. True nearest-POI search needs Google Places or similar
+      -- a new API key + allowlist entry, not free like the current APIs.
+
+Real blockers to remember, not just implementation details:
+- Requires ACCESS_BACKGROUND_LOCATION ("Allow all the time") -- there is
+  NO way to do this with foreground-only location. Android gates any
+  location check while the app isn't open behind this specific permission,
+  on purpose. No workaround exists at the OS level.
+- This exact phone's ColorOS already proved (during the time-based
+  reminder build) that it aggressively kills background processes --
+  continuous background location is usually the FIRST thing OEM battery
+  managers kill. May need the user to manually whitelist Jarvis in
+  ColorOS battery settings for this to work reliably at all.
+- Battery: geofencing itself is cheap (low-power signals, OS throttles
+  checks based on proximity -- same mechanism Google Maps/Life360 use),
+  but untested on this specific device. Benchmark once built.
+
+Play Store compliance (only matters if this ever gets distributed):
+- Background location access is allowed, but requires:
+  - A clear in-app explanation shown BEFORE the OS permission dialog,
+    not just the system prompt alone
+  - A "Background Location" declaration in Play Console justifying it as
+    core to the app
+  - Contextual permission timing -- must ask for foreground access first,
+    then "Allow all the time" only when the user actually engages the
+    location-reminder feature. Asking upfront gets flagged/rejected.
+  - No reuse of location data for anything else (ads, analytics, sale)
+    without separate consent
+
+Positioning if it ever ships to other people:
+- Not a novel ask -- Google Maps, Apple Reminders, Life360, Todoist all
+  do location reminders already, users already trust the pattern
+- Real differentiators (true, not just marketing): everything stays
+  local (LLM, memory, reminders all on-device/on your own machine, no
+  cloud vendor), geofence math runs on-device, only network call is a
+  one-time geocode at reminder-set time. Most consumer apps can't
+  honestly say this.
+- "It's an agent, not a form" -- one sentence instead of a multi-screen
+  setup flow most reminder apps require.
+
+
+BIGGER: PRODUCTIZING / DISTRIBUTING JARVIS
+--------------------------------------------
+If this is ever meant for people other than the current owner:
+- Right now Jarvis depends on agent_server.py running on this specific
+  PC (Ollama, local LLM optionally, reminders.db, chroma_db, the whole
+  ai-agent framework). That doesn't work for someone else's phone.
+- Needs either a real hosted backend, or restructuring so the "server"
+  runs fully on-device instead of on a PC the phone tunnels into.
+- Security posture would need real hardening: AGENT_AUTO_APPROVE=1 is
+  fine for a single trusted owner testing locally, not for a multi-user
+  product -- someone else's agent shouldn't auto-approve file/shell/API
+  tool calls with no human in the loop.
+- This is a separate, later conversation -- not blocking anything being
+  built now.
+
+
+SMALLER LOOSE ENDS FROM TONIGHT
+---------------------------------
+- agent/memory.py (the old flat-file substring-search memory) is dead
+  code now -- nothing imports it since the switch to vector_memory.py.
+  Safe to delete whenever, just hasn't been done yet.
+- [DONE] delete_fact() is now wired up as a real tool (delete_memory) --
+  save/search/delete_memory all exposed end-to-end, approval-gated,
+  tested via a full save->recall->delete->recall cycle.
+- [DONE] Fixed a false-negative bug in executor.py: REQUIRED_TOOL_BY_KEYWORD's
+  "memory" keyword only granted search_memory as valid evidence, so a
+  successful save_memory/delete_memory call could still get reported as
+  "the executor did not call a tool" whenever the objective also matched
+  another keyword (e.g. "save" -> write_file). Objectives like "Save the
+  nickname as Rocket in memory" hit this every time. Fixed by letting a
+  keyword map to multiple acceptable tools; "memory" now covers all
+  three memory tools. Confirmed fixed via a fresh save/recall/delete
+  cycle -- all four steps now report success accurately.
+- [DONE] Fixed a reply-truncation bug in agent_server.py's voice_reply():
+  when a request planned into MULTIPLE tasks that all succeeded (e.g.
+  "delete disliked_jokes and favorite_jokes memory keys" -> two separate
+  delete_memory tasks), the spoken/chat reply only reported tasks[-1]'s
+  result -- the first task's outcome was silently dropped from what the
+  user sees, even though it genuinely ran and succeeded. Fixed by
+  summarizing every completed task's result (first line each) instead of
+  just the last one. Confirmed fixed: a fresh two-key delete now replies
+  "Done -- Deleted: disliked_jokes; Deleted: favorite_jokes" instead of
+  only mentioning the second key.
+- Planner reliability: qwen2.5:1.5b and qwen3:4b both showed real
+  planning/schema issues (invalid task types, hallucinated dates,
+  false-positive success). Currently on openai/gpt-4o-mini via
+  OpenRouter, which has been reliable in testing -- but if the model
+  ever gets swapped back to something smaller/local, expect some of
+  those old failure modes to resurface.
